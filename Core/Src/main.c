@@ -58,6 +58,8 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint8_t rx_buffer[1]; //UART input byte
+uint8_t i2c_rx_buffer[1];
+char i2c_tx_buffer[50];
 char input_data[50]; // String build byte by byte
 char output_data[50]; // UART output string
 char *token; // Variable for string split
@@ -68,6 +70,7 @@ uint32_t beat = 0;
 uint16_t adc_buffer [ADC_BUFFER_LEN];
 uint16_t time_start = 0;
 uint16_t elapsed_time2 = 0;
+uint16_t i2c_response = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -124,10 +127,10 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); // ADC self-calibration routine, before starting ADC
-  HAL_UART_Receive_IT(&huart2, rx_buffer, 1);
+  HAL_UART_Receive_IT(&huart2, rx_buffer, 1); //Wait for UART communication
+  HAL_I2C_Slave_Receive_IT(&hi2c1, i2c_rx_buffer, sizeof(i2c_rx_buffer));
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_buffer, ADC_BUFFER_LEN); // Start ADC conversion with transfer by DMA
   HAL_TIM_Base_Start(&htim6); //start timer 6 with interruptions
-
 
   /* USER CODE END 2 */
 
@@ -136,9 +139,13 @@ int main(void)
 	while (1) {
 		Heartbeat();
 
+		if(i2c_response==1){
+			// An I2C request has been received, sending BMS Data.
+			HAL_I2C_Slave_Transmit_IT(&hi2c1, (uint8_t*) i2c_tx_buffer, sizeof(i2c_tx_buffer));
+			i2c_response=0;
+				}
 		// This block of code send the data to the serial port when the current and voltage signals are received via serial.
 		// This code must be modified to consider the battery current and voltage measurement.
-
 		if (process_data == 1) {
 			// UART input data is ready to be processed
 			if (TESTING) {
@@ -163,6 +170,7 @@ int main(void)
 			HAL_UART_Transmit_IT(&huart2, (uint8_t*) output_data,
 					sizeof(output_data));
 			memset(input_data, 0, strlen(input_data)); //clean input data
+			process_data = 0; // We have processed the data, we have to wait for the arrival of new data.
 		}
 
     /* USER CODE END WHILE */
@@ -246,11 +254,11 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 3;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -264,12 +272,30 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Rank = ADC_REGULAR_RANK_3;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -297,7 +323,7 @@ static void MX_I2C1_Init(void)
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
   hi2c1.Init.Timing = 0x10909CEC;
-  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.OwnAddress1 = 64;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
   hi2c1.Init.OwnAddress2 = 0;
@@ -524,7 +550,37 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
 
 // Called when buffer is completely filled
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+float current=0;
+float voltage=0;
+float temperature=0;
+int counter=0;
+for(int i=0; i<NUMBER_OF_MEASURES*NUMBER_OF_SAMPLES; i=i+3){
+	current+= adc_buffer[i]*3.315/4096.0;
+	voltage+= adc_buffer[i+1]*3.315/4096.0;
+	temperature+= adc_buffer[i+2]*3.315/4096.0;
+	counter++;
+}
+current = current/NUMBER_OF_SAMPLES;
+voltage = voltage/NUMBER_OF_SAMPLES;
+temperature= temperature/NUMBER_OF_SAMPLES;
+}
 
+/* I2C Callback functions
+ *
+ */
+void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef* hi2c){
+	if (i2c_rx_buffer[0] != '\r') {
+			// Read the byte/char and add it to the data variable if there is no \r
+			strcat(i2c_tx_buffer, (char*) i2c_rx_buffer);
+			HAL_I2C_Slave_Receive_IT(&hi2c1, i2c_rx_buffer, sizeof(i2c_rx_buffer)); //we are still waiting for more data, we will continuo reading
+		} else {
+			//We get the line terminator, then process the data and send
+			i2c_response = 1;
+		}
+}
+
+void HAL_I2C_SlaveTxCpltCallback(I2C_HandleTypeDef* hi2c){
+	HAL_I2C_Slave_Receive_IT(&hi2c1, i2c_rx_buffer, sizeof(i2c_rx_buffer)); // Request has been responded, wait until next request.
 }
 
 /* USER CODE END 4 */
