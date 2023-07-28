@@ -67,7 +67,8 @@ char input_data[50]; // String build byte by byte
 char output_data[50]; // UART output string
 char *token; // Variable for string split
 /* Elapsed time Variables */
-uint32_t t0 = 0;
+uint32_t t0 = 0; //Sampling time timer
+uint32_t contactor_timer = 0;
 uint16_t start_time = 0;
 uint16_t elapsed_time = 0; // soc estimation elapsed time
 uint8_t process_data = 0; //Flag to start processing data
@@ -89,8 +90,16 @@ int i2c_counter = 0;
 typedef struct soc_measurement {
 	uint8_t MSB, LSB;
 } soc_measurement;
-
 soc_measurement i2c_measurements[I2C_MEASURES];
+/* Contactor Variables*/
+typedef enum {
+	off, precharge, positive, on
+} CONTACTOR_STATES;
+typedef enum {
+	idle, i2c_start_request, precharge_cplt, positive_cplt
+} CONTACTOR_EVENTS;
+CONTACTOR_STATES contactor_state = off;
+CONTACTOR_EVENTS contactor_transition = idle;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,6 +117,7 @@ void create_i2c_buffer();
 soc_measurement int_to_byte(float value);
 void HIL_simulation();
 void soc_estimator();
+void contactors_control();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -157,6 +167,11 @@ int main(void) {
 	HAL_TIM_Base_Start(&htim6); //start timer 6 with interruptions
 	create_i2c_buffer(); // Initialize the buffer to sent with 0
 	t0 = HAL_GetTick(); // reset sampling time timer
+	//Close both contactors
+	HAL_GPIO_WritePin(PRECHARGE_RELAY_GPIO_Port, PRECHARGE_RELAY_Pin,
+			GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(POSITIVE_RELAY_GPIO_Port, POSITIVE_RELAY_Pin,
+			GPIO_PIN_RESET);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -178,7 +193,14 @@ int main(void) {
 			// 2. Slave transmit buffer with data
 			HAL_I2C_Slave_Seq_Transmit_IT(&hi2c1, (uint8_t*) i2c_tx_buffer,
 			I2C_RX_BUFFER_SIZE, I2C_FIRST_FRAME);
+			// Let's check if contactors are connected
+			if (contactor_state == off && i2c_rx_buffer[0] == 'B') {
+				// contactors are off let's set the flag to start driver connection
+				contactor_transition = i2c_start_request;
+			}
 		}
+
+		contactors_control();
 
 		// Proccess adc data when dma transfer is complete
 		if (adc_dma_complete == 1) {
@@ -186,12 +208,11 @@ int main(void) {
 			adc_dma_complete = 0;
 		}
 
-		if (HAL_GetTick() - t0 >= SAMPLING_TIME_MS){
+		// Estimate SoC every 100ms
+		if (HAL_GetTick() - t0 >= SAMPLING_TIME_MS) {
 			t0 = HAL_GetTick();
 			soc_estimator();
 		}
-
-
 
 		//HIL_simulation();
 
@@ -336,7 +357,7 @@ static void MX_I2C1_Init(void) {
 	/* USER CODE END I2C1_Init 1 */
 	hi2c1.Instance = I2C1;
 	hi2c1.Init.Timing = 0x10909CEC;
-	hi2c1.Init.OwnAddress1 = 64;
+	hi2c1.Init.OwnAddress1 = 46;
 	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
 	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
 	hi2c1.Init.OwnAddress2 = 0;
@@ -645,12 +666,66 @@ void HIL_simulation() {
 	}
 }
 
-void soc_estimator(){
+void soc_estimator() {
 	rtU.current = current;
-	rtU.voltage= voltage;
+	rtU.voltage = voltage;
 	start_time = __HAL_TIM_GET_COUNTER(&htim6); // Get current time
 	RC_Model_KF_vout_for_MCU_step();
 	elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
+}
+
+void contactors_control() {
+	GPIO_PinState precharge_pin_state = HAL_GPIO_ReadPin(
+			PRECHARGE_RELAY_GPIO_Port, PRECHARGE_RELAY_Pin);
+	GPIO_PinState positive_pin_state = HAL_GPIO_ReadPin(
+			POSITIVE_RELAY_GPIO_Port, POSITIVE_RELAY_Pin);
+	//Transitions
+	if (contactor_state == precharge
+			&& (HAL_GetTick() - contactor_timer) >= 1000 && current < 3
+			&& precharge_pin_state == 1 && positive_pin_state == 0) {
+		//Driver has been precharged
+		contactor_transition = precharge_cplt;
+		contactor_timer = HAL_GetTick(); //Set timer to wait 1s;
+	}
+
+	if (contactor_state == positive && (HAL_GetTick() - contactor_timer) >= 250
+			&& precharge_pin_state == 1 && positive_pin_state == 1) {
+		contactor_transition = positive_cplt;
+	}
+	// Contactors' control
+	switch (contactor_state) {
+	case off:
+		if (contactor_transition == i2c_start_request) {
+			contactor_state = precharge;
+			contactor_timer = HAL_GetTick(); //Set timer to wait 1s;
+		}
+		break;
+	case precharge:
+		//Let's close the precharge contactor and let the positive contactor open
+		HAL_GPIO_WritePin(PRECHARGE_RELAY_GPIO_Port, PRECHARGE_RELAY_Pin,
+				GPIO_PIN_SET);
+		HAL_GPIO_WritePin(POSITIVE_RELAY_GPIO_Port, POSITIVE_RELAY_Pin,
+				GPIO_PIN_RESET);
+		if (contactor_transition == precharge_cplt) {
+			contactor_state = positive;
+		}
+		break;
+	case positive:
+		HAL_GPIO_WritePin(PRECHARGE_RELAY_GPIO_Port, PRECHARGE_RELAY_Pin,
+				GPIO_PIN_SET);
+		HAL_GPIO_WritePin(POSITIVE_RELAY_GPIO_Port, POSITIVE_RELAY_Pin,
+				GPIO_PIN_SET);
+		if (contactor_transition == positive_cplt) {
+			contactor_state = on;
+		}
+		break;
+	case on:
+		HAL_GPIO_WritePin(PRECHARGE_RELAY_GPIO_Port, PRECHARGE_RELAY_Pin,
+				GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(POSITIVE_RELAY_GPIO_Port, POSITIVE_RELAY_Pin,
+				GPIO_PIN_SET);
+		break;
+	}
 }
 /* USER CODE END 4 */
 
