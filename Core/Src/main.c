@@ -38,7 +38,10 @@
 #define NUMBER_OF_SAMPLES 1000
 #define NUMBER_OF_MEASURES 3
 #define ADC_BUFFER_LEN NUMBER_OF_SAMPLES*NUMBER_OF_MEASURES
-#define I2C_RX_BUFFER_SIZE 5
+#define I2C_RX_BUFFER_SIZE 20
+#define I2C_RESPONSE_HEADER 'B'
+#define I2C_MEASURES 6
+#define SAMPLING_TIME_MS 100
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,27 +61,36 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+/* UART Variables */
 uint8_t rx_buffer[1]; //UART input byte
-uint8_t i2c_rx_buffer[I2C_RX_BUFFER_SIZE];
-char i2c_tx_buffer[I2C_RX_BUFFER_SIZE]="OK!\r";
 char input_data[50]; // String build byte by byte
 char output_data[50]; // UART output string
 char *token; // Variable for string split
-uint32_t start_time = 0;
-uint32_t elapsed_time = 0;
+/* Elapsed time Variables */
+uint32_t t0 = 0;
+uint16_t start_time = 0;
+uint16_t elapsed_time = 0; // soc estimation elapsed time
 uint8_t process_data = 0; //Flag to start processing data
-uint32_t beat = 0;
-uint16_t adc_buffer[ADC_BUFFER_LEN];
-uint16_t time_start = 0;
-uint16_t elapsed_time2 = 0;
-uint16_t i2c_response = 0;
+uint32_t beat = 0; // Variable for heartbeat;
+/* ADC Variables */
+uint16_t adc_buffer[ADC_BUFFER_LEN]; // adc buffer
 uint8_t adc_dma_complete = 0;
+/* SoC  Variables */
 float current = 0;
 float voltage = 0;
 float temperature = 0;
+/* I2C Variables */
+uint8_t i2c_rx_buffer[I2C_RX_BUFFER_SIZE];
+char i2c_tx_buffer[I2C_RX_BUFFER_SIZE];
 uint8_t master_reads = 0;
 uint8_t master_writes = 0;
 int i2c_counter = 0;
+// I2C Bytes to send and structure (12);
+typedef struct soc_measurement {
+	uint8_t MSB, LSB;
+} soc_measurement;
+
+soc_measurement i2c_measurements[I2C_MEASURES];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -92,6 +104,10 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 void process_adc_buffer();
+void create_i2c_buffer();
+soc_measurement int_to_byte(float value);
+void HIL_simulation();
+void soc_estimator();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -139,7 +155,8 @@ int main(void) {
 	; //Enable the address listen mode in slave mode
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) adc_buffer, ADC_BUFFER_LEN); // Start ADC conversion with transfer by DMA
 	HAL_TIM_Base_Start(&htim6); //start timer 6 with interruptions
-
+	create_i2c_buffer(); // Initialize the buffer to sent with 0
+	t0 = HAL_GetTick(); // reset sampling time timer
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -147,21 +164,20 @@ int main(void) {
 	while (1) {
 
 		Heartbeat();
-		// I2C proccesing
-		if(master_writes == 1){
+		// I2C Request has been received.
+		if (master_writes == 1) {
 			master_writes = 0; // clean flag
 			// Master requested to write/transmit, then slave receive
-			HAL_I2C_Slave_Seq_Receive_IT(&hi2c1, i2c_rx_buffer, I2C_RX_BUFFER_SIZE, I2C_FIRST_FRAME);
-		} else if (master_reads == 1){
+			HAL_I2C_Slave_Seq_Receive_IT(&hi2c1, i2c_rx_buffer,
+			I2C_RX_BUFFER_SIZE, I2C_FIRST_FRAME);
+		} else if (master_reads == 1) {
 			master_reads = 0; // clean flag
 			//Master requested to read/receive, then the slave transmit
-			i2c_counter++;
-			if(i2c_counter<9){
-			sprintf(i2c_tx_buffer,"OK%d\r",i2c_counter);
-			}else{
-				i2c_counter=0;
-			}
-			HAL_I2C_Slave_Seq_Transmit_IT(&hi2c1, (uint8_t*) i2c_tx_buffer, I2C_RX_BUFFER_SIZE, I2C_FIRST_FRAME);
+			//1. Build data to send.
+			create_i2c_buffer();
+			// 2. Slave transmit buffer with data
+			HAL_I2C_Slave_Seq_Transmit_IT(&hi2c1, (uint8_t*) i2c_tx_buffer,
+			I2C_RX_BUFFER_SIZE, I2C_FIRST_FRAME);
 		}
 
 		// Proccess adc data when dma transfer is complete
@@ -170,35 +186,14 @@ int main(void) {
 			adc_dma_complete = 0;
 		}
 
-		// This block of code send the data to the serial port when the current and voltage signals are received via serial.
-		// This code must be modified to consider the battery current and voltage measurement.
-		if (process_data == 1) {
-			// UART input data is ready to be processed
-			if (TESTING) {
-				HAL_UART_Transmit_IT(&huart2, (uint8_t*) input_data,
-						sizeof(input_data));
-			}
-			start_time = HAL_GetTick();
-			//time_start = __HAL_TIM_GET_COUNTER(&htim6); // Timer 1us precision
-			token = strtok(input_data, ";");
-			rtU.current = atof(token);
-			while (token != NULL) {
-				token = strtok(NULL, " ");
-				if (token != NULL) {
-					rtU.voltage = atof(token);
-				}
-			}
-			RC_Model_KF_vout_for_MCU_step();
-			elapsed_time = HAL_GetTick() - start_time;
-			sprintf(output_data, "%ld;%.4f;%.4f;%.4f;%.4f\r", elapsed_time,
-					rtY.soc_estimated, rtY.voltage_estimated, rtU.current,
-					rtU.voltage);
-			process_data = 0; //The input data has been processed
-			HAL_UART_Transmit_IT(&huart2, (uint8_t*) output_data,
-					sizeof(output_data));
-			memset(input_data, 0, strlen(input_data)); //clean input data
-			process_data = 0; // We have processed the data, we have to wait for the arrival of new data.
+		if (HAL_GetTick() - t0 >= SAMPLING_TIME_MS){
+			t0 = HAL_GetTick();
+			soc_estimator();
 		}
+
+
+
+		//HIL_simulation();
 
 		/* USER CODE END WHILE */
 
@@ -562,6 +557,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	adc_dma_complete = 1;
 }
 
+/* Process ADC Buffer Function */
 void process_adc_buffer() {
 	current = 0;
 	voltage = 0;
@@ -575,9 +571,11 @@ void process_adc_buffer() {
 	voltage = voltage / NUMBER_OF_SAMPLES;
 	temperature = temperature / NUMBER_OF_SAMPLES;
 }
+
 /* I2C Callback functions */
 
-void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16_t AddrMatchCode) {
+void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection,
+		uint16_t AddrMatchCode) {
 	//Check if the master is reading or writing.
 	if (TransferDirection == I2C_DIRECTION_TRANSMIT) {
 		master_writes = 1;
@@ -586,10 +584,6 @@ void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, ui
 	}
 }
 
-//void HAL_I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c)
-//{
-//
-//}
 void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 
 }
@@ -597,6 +591,67 @@ void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 void HAL_I2C_SlaveTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 }
 
+/* I2C processing functions */
+void create_i2c_buffer() {
+// Create an array with the variables
+	float measurements_temp[6] = { rtU.current, rtU.voltage, temperature,
+			rtY.soc_estimated, rtY.soc_measured, elapsed_time };
+
+//filling the array of soc_measurment
+	for (int i = 0; i < I2C_MEASURES; i++) {
+		i2c_measurements[i] = int_to_byte(measurements_temp[i]);
+		i2c_tx_buffer[i * 2] = i2c_measurements[i].MSB;
+		i2c_tx_buffer[(i * 2) + 1] = i2c_measurements[i].LSB;
+	}
+}
+
+soc_measurement int_to_byte(float value) {
+	int16_t temp_int = value * 1000;
+	soc_measurement measure;
+	measure.MSB = temp_int >> 8; // Most Significant Byte
+	measure.LSB = temp_int & 0xFF; // Less significant Byte
+	return measure;
+}
+
+/* Hardware In the Loop simulation */
+void HIL_simulation() {
+	// This block of code send the data to the serial port when the current and voltage signals are received via serial.
+	if (process_data == 1) {
+		// UART input data is ready to be processed
+		if (TESTING) {
+			HAL_UART_Transmit_IT(&huart2, (uint8_t*) input_data,
+					sizeof(input_data));
+		}
+		start_time = __HAL_TIM_GET_COUNTER(&htim6);
+		//time_start = __HAL_TIM_GET_COUNTER(&htim6); // Timer 1us precision
+		token = strtok(input_data, ";");
+		rtU.current = atof(token);
+		while (token != NULL) {
+			token = strtok(NULL, " ");
+			if (token != NULL) {
+				rtU.voltage = atof(token);
+			}
+		}
+		RC_Model_KF_vout_for_MCU_step();
+		elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
+		sprintf(output_data, "%d;%.4f;%.4f;%.4f;%.4f\r", elapsed_time,
+				rtY.soc_estimated, rtY.voltage_estimated, rtU.current,
+				rtU.voltage);
+		process_data = 0; //The input data has been processed
+		HAL_UART_Transmit_IT(&huart2, (uint8_t*) output_data,
+				sizeof(output_data));
+		memset(input_data, 0, strlen(input_data)); //clean input data
+		process_data = 0; // We have processed the data, we have to wait for the arrival of new data.
+	}
+}
+
+void soc_estimator(){
+	rtU.current = current;
+	rtU.voltage= voltage;
+	start_time = __HAL_TIM_GET_COUNTER(&htim6); // Get current time
+	RC_Model_KF_vout_for_MCU_step();
+	elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
+}
 /* USER CODE END 4 */
 
 /**
