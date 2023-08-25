@@ -40,6 +40,8 @@
 #define NUMBER_OF_MEASURES 3
 #define ADC_BUFFER_LEN NUMBER_OF_SAMPLES*NUMBER_OF_MEASURES
 #define V_I_REF 1.647
+#define V_GAIN 1.008856088
+#define I_GAIN 1.006723716
 #define R1 100000
 #define ROUT 12000
 #define I2C_RX_BUFFER_SIZE 20
@@ -119,6 +121,7 @@ static void MX_TIM6_Init(void);
 void process_adc_buffer();
 void create_i2c_buffer();
 soc_measurement int_to_byte(float value);
+soc_measurement uint_to_byte(uint16_t value);
 void HIL_simulation();
 void soc_estimator();
 void contactors_control();
@@ -602,19 +605,32 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 }
 
 /* Process ADC Buffer Function */
+float voltage_temp = 0; // For debug purposes
+float current_temp = 0; // for debug purposes
+float temperature_temp = 0; // for debug purposes
 void process_adc_buffer() {
 	float sum_current = 0;
 	float sum_voltage = 0;
 	float sum_temperature = 0;
+	float Rtemp = 0;
 	for (int i = 0; i < NUMBER_OF_MEASURES * NUMBER_OF_SAMPLES; i = i + 3) {
 		sum_voltage += adc_buffer[i] * 3.312 / 4096.0;
 		sum_current += adc_buffer[i + 1] * 3.312 / 4096.0;
 		sum_temperature += adc_buffer[i + 2] * 3.312 / 4096.0;
 	}
-	current = ((sum_current / NUMBER_OF_SAMPLES)-V_I_REF)*40;
-	voltage = (sum_voltage / NUMBER_OF_SAMPLES)*(R1+ROUT)/ROUT;
+	current_temp = (sum_current / NUMBER_OF_SAMPLES)*I_GAIN;
+	current_temp = -(((sum_current / NUMBER_OF_SAMPLES)*(I_GAIN))-V_I_REF)*40;
+	if(current_temp>-0.1 && current_temp<0.1){
+		current = 0;
+	}else{
+		current = current_temp;
+	}
+	voltage_temp = (sum_voltage / NUMBER_OF_SAMPLES)*V_GAIN;
+	voltage = (sum_voltage / NUMBER_OF_SAMPLES)*V_GAIN*(R1+ROUT)/ROUT;
 	sum_temperature = sum_temperature / NUMBER_OF_SAMPLES;
-	temperature = -27.71*log((R1*(sum_temperature))/(3.315-sum_temperature))+227.31; //Temperature = -21.71*ln(Rtemp)+227.31
+	temperature_temp = sum_temperature;
+	Rtemp = (R1*(sum_temperature))/(4.98-sum_temperature); // Get Sensor Resistance
+	temperature = -21.71*log(Rtemp)+227.31; //Temperature = -21.71*ln(Rtemp)+227.31
 }
 
 void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection,
@@ -637,19 +653,34 @@ void HAL_I2C_SlaveTxCpltCallback(I2C_HandleTypeDef *hi2c) {
 /* I2C processing functions */
 void create_i2c_buffer() {
 // Create an array with the variables
-	float measurements_temp[6] = { rtU.current, rtU.voltage, temperature,
+	float measurements_temp[6] = { rtU.current, rtU.voltage, temperature/10,
 			rtY.soc_estimated, rtY.soc_measured, elapsed_time };
 
 //filling the array of soc_measurment
 	for (int i = 0; i < I2C_MEASURES; i++) {
-		i2c_measurements[i] = int_to_byte(measurements_temp[i]);
-		i2c_tx_buffer[i * 2] = i2c_measurements[i].MSB;
-		i2c_tx_buffer[(i * 2) + 1] = i2c_measurements[i].LSB;
+		if (i != 5) {
+			i2c_measurements[i] = int_to_byte(measurements_temp[i]);
+			i2c_tx_buffer[i * 2] = i2c_measurements[i].MSB;
+			i2c_tx_buffer[(i * 2) + 1] = i2c_measurements[i].LSB;
+		} else {
+			// elapsed_time is a uint16, then convertion is different;
+			i2c_measurements[i] = uint_to_byte(measurements_temp[i]);
+			i2c_tx_buffer[i * 2] = i2c_measurements[i].MSB;
+			i2c_tx_buffer[(i * 2) + 1] = i2c_measurements[i].LSB;
+		}
 	}
 }
 
 soc_measurement int_to_byte(float value) {
 	int16_t temp_int = value * 1000;
+	soc_measurement measure;
+	measure.MSB = temp_int >> 8; // Most Significant Byte
+	measure.LSB = temp_int & 0xFF; // Less significant Byte
+	return measure;
+}
+
+soc_measurement uint_to_byte(uint16_t value) {
+	uint16_t temp_int = value;
 	soc_measurement measure;
 	measure.MSB = temp_int >> 8; // Most Significant Byte
 	measure.LSB = temp_int & 0xFF; // Less significant Byte
@@ -692,6 +723,7 @@ void soc_estimator() {
 	rtU.current = current;
 	rtU.voltage = voltage;
 	start_time = __HAL_TIM_GET_COUNTER(&htim6); // Get current time
+//	HAL_Delay(9);
 	RC_Model_KF_vout_for_MCU_step();
 	elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
 }
