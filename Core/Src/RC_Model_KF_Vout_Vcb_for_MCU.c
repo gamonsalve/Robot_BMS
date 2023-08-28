@@ -3,13 +3,13 @@
  * course requirements at degree granting institutions only.  Not for
  * government, commercial, or other organizational use.
  *
- * File: RC_Model_KF_vout_for_MCU.c
+ * File: RC_Model_KF_Vout_Vcb_for_MCU.c
  *
- * Code generated for Simulink model 'RC_Model_KF_vout_for_MCU'.
+ * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.14
+ * Model version                  : 4.68
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Wed Jun 14 13:33:18 2023
+ * C/C++ source code generated on : Fri Aug 25 14:07:21 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -19,7 +19,7 @@
  * Validation result: Not run
  */
 
-#include "RC_Model_KF_vout_for_MCU.h"
+#include "RC_Model_KF_Vout_Vcb_for_MCU.h"
 #include "rtwtypes.h"
 #include <string.h>
 #include <math.h>
@@ -39,6 +39,8 @@ ExtY rtY;
 static RT_MODEL rtM_;
 RT_MODEL *const rtM = &rtM_;
 extern real_T rt_hypotd_snf(real_T u0, real_T u1);
+extern real_T rt_urand_Upu32_Yd_f_pw_snf(uint32_T *u);
+extern real_T rt_nrand_Upu32_Yd_f_pw_snf(uint32_T *u);
 static real_T look1_binlca(real_T u0, const real_T bp0[], const real_T table[],
   uint32_T maxIndex);
 static real_T look1_binlg(real_T u0, const real_T bp0[], const real_T table[],
@@ -46,21 +48,29 @@ static real_T look1_binlg(real_T u0, const real_T bp0[], const real_T table[],
 static int32_T div_nde_s32_floor(int32_T numerator, int32_T denominator);
 
 /* Forward declaration for local functions */
-static real_T xnrm2(int32_T n, const real_T x[4], int32_T ix0);
-static real_T qrFactor(const real_T A[3], const real_T S[9], real_T Ns);
-static void trisolve(real_T A, real_T B_1[3]);
-static void mtimes(const real_T A[9], const real_T B_0[9], real_T C[9]);
-static real_T xnrm2_g(int32_T n, const real_T x[12], int32_T ix0);
-static void xgemv(int32_T m, int32_T n, const real_T A[12], int32_T ia0, const
-                  real_T x[12], int32_T ix0, real_T y[3]);
+static real_T xnrm2(int32_T n, const real_T x[10], int32_T ix0);
+static void xgemv(int32_T m, int32_T n, const real_T A[10], int32_T ia0, const
+                  real_T x[10], int32_T ix0, real_T y[2]);
 static void xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
-                  y[3], real_T A[12], int32_T ia0);
-static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3]);
-static real_T xnrm2_gw(int32_T n, const real_T x[18], int32_T ix0);
-static void xgemv_g(int32_T m, int32_T n, const real_T A[18], int32_T ia0, const
-                    real_T x[18], int32_T ix0, real_T y[3]);
+                  y[2], real_T A[10], int32_T ia0);
+static void qrFactor(const real_T A[6], const real_T S[9], const real_T Ns[4],
+                     real_T b_S[4]);
+static void trisolve(const real_T A[4], real_T B_3[6]);
+static void linsolve(const real_T A[4], const real_T B_0[6], real_T C[6]);
+static void trisolve_o(const real_T A[4], real_T B_4[6]);
+static void linsolve_b(const real_T A[4], const real_T B_1[6], real_T C[6]);
+static void mtimes(const real_T A[9], const real_T B_2[9], real_T C[9]);
+static real_T xnrm2_g(int32_T n, const real_T x[15], int32_T ix0);
+static void xgemv_g(int32_T m, int32_T n, const real_T A[15], int32_T ia0, const
+                    real_T x[15], int32_T ix0, real_T y[3]);
 static void xgerc_a(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-                    real_T y[3], real_T A[18], int32_T ia0);
+                    real_T y[3], real_T A[15], int32_T ia0);
+static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[6]);
+static real_T xnrm2_gw(int32_T n, const real_T x[18], int32_T ix0);
+static void xgemv_gp(int32_T m, int32_T n, const real_T A[18], int32_T ia0,
+                     const real_T x[18], int32_T ix0, real_T y[3]);
+static void xgerc_aq(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+                     real_T y[3], real_T A[18], int32_T ia0);
 static void qrFactor_jq(const real_T A[9], real_T S[9], const real_T Ns[9]);
 static real_T xnrm2_gwq(int32_T n, const real_T x[9], int32_T ix0);
 static real_T xdotc(int32_T n, const real_T x[9], int32_T ix0, const real_T y[9],
@@ -75,10 +85,10 @@ static void xswap(real_T x[9], int32_T ix0, int32_T iy0);
 static void xrotg(real_T *a, real_T *b, real_T *c, real_T *s);
 static void xrot(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s);
 static void svd(const real_T A[9], real_T U[9], real_T s[3], real_T V[9]);
-static void xgemv_gp(int32_T m, int32_T n, const real_T A[9], int32_T ia0, const
-                     real_T x[9], int32_T ix0, real_T y[3]);
-static void xgerc_aq(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-                     real_T y[3], real_T A[9], int32_T ia0);
+static void xgemv_gpk(int32_T m, int32_T n, const real_T A[9], int32_T ia0,
+                      const real_T x[9], int32_T ix0, real_T y[3]);
+static void xgerc_aq4(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+                      real_T y[3], real_T A[9], int32_T ia0);
 static void qr(const real_T A[9], real_T Q[9], real_T R[9]);
 static real_T rtGetNaN(void);
 static real32_T rtGetNaNF(void);
@@ -409,8 +419,8 @@ static int32_T div_nde_s32_floor(int32_T numerator, int32_T denominator)
            0) ? -1 : 0) + numerator / denominator;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static real_T xnrm2(int32_T n, const real_T x[4], int32_T ix0)
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static real_T xnrm2(int32_T n, const real_T x[10], int32_T ix0)
 {
   real_T y;
   int32_T k;
@@ -467,75 +477,289 @@ real_T rt_hypotd_snf(real_T u0, real_T u1)
   return y;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static real_T qrFactor(const real_T A[3], const real_T S[9], real_T Ns)
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgemv(int32_T m, int32_T n, const real_T A[10], int32_T ia0, const
+                  real_T x[10], int32_T ix0, real_T y[2])
 {
-  real_T b_A[4];
-  real_T b_S;
-  real_T s;
-  int32_T aoffset;
-  int32_T i;
-  for (i = 0; i < 3; i++) {
-    aoffset = i * 3;
-    b_A[i] = (S[aoffset + 1] * A[1] + S[aoffset] * A[0]) + S[aoffset + 2] * A[2];
-  }
-
-  b_A[3] = Ns;
-  b_S = b_A[0];
-  s = xnrm2(3, b_A, 2);
-  if (s != 0.0) {
-    s = rt_hypotd_snf(b_A[0], s);
-    if (b_A[0] >= 0.0) {
-      s = -s;
+  int32_T b_iy;
+  int32_T iyend;
+  if ((m != 0) && (n != 0)) {
+    int32_T b;
+    if (n - 1 >= 0) {
+      memset(&y[0], 0, (uint32_T)n * sizeof(real_T));
     }
 
-    if (fabs(s) < 1.0020841800044864E-292) {
-      aoffset = 0;
-      do {
-        aoffset++;
-        b_A[1] *= 9.9792015476736E+291;
-        b_A[2] *= 9.9792015476736E+291;
-        b_A[3] *= 9.9792015476736E+291;
-        s *= 9.9792015476736E+291;
-        b_S *= 9.9792015476736E+291;
-      } while ((fabs(s) < 1.0020841800044864E-292) && (aoffset < 20));
+    b = (n - 1) * 5 + ia0;
+    for (b_iy = ia0; b_iy <= b; b_iy += 5) {
+      real_T c;
+      int32_T d;
+      c = 0.0;
+      d = b_iy + m;
+      for (iyend = b_iy; iyend < d; iyend++) {
+        c += x[((ix0 + iyend) - b_iy) - 1] * A[iyend - 1];
+      }
 
-      s = rt_hypotd_snf(b_S, xnrm2(3, b_A, 2));
-      if (b_S >= 0.0) {
+      iyend = div_nde_s32_floor(b_iy - ia0, 5);
+      y[iyend] += c;
+    }
+  }
+}
+
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
+                  y[2], real_T A[10], int32_T ia0)
+{
+  int32_T ijA;
+  int32_T j;
+  if (!(alpha1 == 0.0)) {
+    int32_T jA;
+    jA = ia0;
+    for (j = 0; j < n; j++) {
+      real_T temp;
+      temp = y[j];
+      if (temp != 0.0) {
+        int32_T b;
+        temp *= alpha1;
+        b = m + jA;
+        for (ijA = jA; ijA < b; ijA++) {
+          A[ijA - 1] += A[((ix0 + ijA) - jA) - 1] * temp;
+        }
+      }
+
+      jA += 5;
+    }
+  }
+}
+
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void qrFactor(const real_T A[6], const real_T S[9], const real_T Ns[4],
+                     real_T b_S[4])
+{
+  real_T b_A[10];
+  real_T y[6];
+  real_T R[4];
+  real_T tau[2];
+  real_T work[2];
+  int32_T aoffset;
+  int32_T c_k;
+  int32_T coffset;
+  int32_T j;
+  int32_T k;
+  int32_T lastv;
+  for (j = 0; j < 2; j++) {
+    coffset = j * 3;
+    for (lastv = 0; lastv < 3; lastv++) {
+      aoffset = lastv * 3;
+      y[coffset + lastv] = (S[aoffset + 1] * A[j + 2] + S[aoffset] * A[j]) +
+        S[aoffset + 2] * A[j + 4];
+    }
+  }
+
+  for (j = 0; j < 2; j++) {
+    b_A[5 * j] = y[3 * j];
+    b_A[5 * j + 1] = y[3 * j + 1];
+    b_A[5 * j + 2] = y[3 * j + 2];
+    b_A[5 * j + 3] = Ns[j];
+    b_A[5 * j + 4] = Ns[j + 2];
+    tau[j] = 0.0;
+    work[j] = 0.0;
+  }
+
+  for (j = 0; j < 2; j++) {
+    real_T atmp;
+    real_T s;
+    coffset = j * 5 + j;
+    atmp = b_A[coffset];
+    lastv = coffset + 2;
+    tau[j] = 0.0;
+    s = xnrm2(4 - j, b_A, coffset + 2);
+    if (s != 0.0) {
+      s = rt_hypotd_snf(b_A[coffset], s);
+      if (b_A[coffset] >= 0.0) {
         s = -s;
       }
 
-      for (i = 0; i < aoffset; i++) {
-        s *= 1.0020841800044864E-292;
+      if (fabs(s) < 1.0020841800044864E-292) {
+        aoffset = 0;
+        k = (coffset - j) + 5;
+        do {
+          aoffset++;
+          for (c_k = lastv; c_k <= k; c_k++) {
+            b_A[c_k - 1] *= 9.9792015476736E+291;
+          }
+
+          s *= 9.9792015476736E+291;
+          atmp *= 9.9792015476736E+291;
+        } while ((fabs(s) < 1.0020841800044864E-292) && (aoffset < 20));
+
+        s = rt_hypotd_snf(atmp, xnrm2(4 - j, b_A, coffset + 2));
+        if (atmp >= 0.0) {
+          s = -s;
+        }
+
+        tau[j] = (s - atmp) / s;
+        atmp = 1.0 / (atmp - s);
+        for (c_k = lastv; c_k <= k; c_k++) {
+          b_A[c_k - 1] *= atmp;
+        }
+
+        for (lastv = 0; lastv < aoffset; lastv++) {
+          s *= 1.0020841800044864E-292;
+        }
+
+        atmp = s;
+      } else {
+        tau[j] = (s - b_A[coffset]) / s;
+        atmp = 1.0 / (b_A[coffset] - s);
+        aoffset = (coffset - j) + 5;
+        for (k = lastv; k <= aoffset; k++) {
+          b_A[k - 1] *= atmp;
+        }
+
+        atmp = s;
+      }
+    }
+
+    b_A[coffset] = atmp;
+    if (j + 1 < 2) {
+      s = b_A[coffset];
+      b_A[coffset] = 1.0;
+      if (tau[0] != 0.0) {
+        lastv = 5;
+        aoffset = coffset + 4;
+        while ((lastv > 0) && (b_A[aoffset] == 0.0)) {
+          lastv--;
+          aoffset--;
+        }
+
+        aoffset = 1;
+        k = coffset;
+        int32_T exitg1;
+        do {
+          exitg1 = 0;
+          if (k + 6 <= (coffset + lastv) + 5) {
+            if (b_A[k + 5] != 0.0) {
+              exitg1 = 1;
+            } else {
+              k++;
+            }
+          } else {
+            aoffset = 0;
+            exitg1 = 1;
+          }
+        } while (exitg1 == 0);
+      } else {
+        lastv = 0;
+        aoffset = 0;
       }
 
-      b_S = s;
-    } else {
-      b_S = s;
+      if (lastv > 0) {
+        xgemv(lastv, aoffset, b_A, coffset + 6, b_A, coffset + 1, work);
+        xgerc(lastv, aoffset, -tau[0], coffset + 1, work, b_A, coffset + 6);
+      }
+
+      b_A[coffset] = s;
     }
   }
 
-  return b_S;
+  for (j = 0; j < 2; j++) {
+    for (coffset = 0; coffset <= j; coffset++) {
+      R[coffset + (j << 1)] = b_A[5 * j + coffset];
+    }
+
+    if (j + 2 <= 2) {
+      R[(j << 1) + 1] = 0.0;
+    }
+  }
+
+  b_S[0] = R[0];
+  b_S[1] = R[2];
+  b_S[2] = R[1];
+  b_S[3] = R[3];
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void trisolve(real_T A, real_T B_1[3])
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void trisolve(const real_T A[4], real_T B_3[6])
 {
-  if (B_1[0] != 0.0) {
-    B_1[0] /= A;
-  }
-
-  if (B_1[1] != 0.0) {
-    B_1[1] /= A;
-  }
-
-  if (B_1[2] != 0.0) {
-    B_1[2] /= A;
+  int32_T b_k;
+  int32_T i;
+  int32_T j;
+  for (j = 0; j < 3; j++) {
+    int32_T jBcol;
+    jBcol = j << 1;
+    for (b_k = 0; b_k < 2; b_k++) {
+      real_T tmp_0;
+      int32_T kAcol;
+      int32_T tmp;
+      kAcol = b_k << 1;
+      tmp = b_k + jBcol;
+      tmp_0 = B_3[tmp];
+      if (tmp_0 != 0.0) {
+        B_3[tmp] = tmp_0 / A[b_k + kAcol];
+        for (i = b_k + 2; i < 3; i++) {
+          B_3[jBcol + 1] -= A[kAcol + 1] * B_3[tmp];
+        }
+      }
+    }
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void mtimes(const real_T A[9], const real_T B_0[9], real_T C[9])
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void linsolve(const real_T A[4], const real_T B_0[6], real_T C[6])
+{
+  int32_T j;
+  for (j = 0; j < 3; j++) {
+    int32_T C_tmp;
+    C_tmp = j << 1;
+    C[C_tmp] = B_0[C_tmp];
+    C[C_tmp + 1] = B_0[C_tmp + 1];
+  }
+
+  trisolve(A, C);
+}
+
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void trisolve_o(const real_T A[4], real_T B_4[6])
+{
+  int32_T i;
+  int32_T j;
+  int32_T k;
+  for (j = 0; j < 3; j++) {
+    int32_T jBcol;
+    jBcol = j << 1;
+    for (k = 1; k >= 0; k--) {
+      real_T tmp_0;
+      int32_T kAcol;
+      int32_T tmp;
+      kAcol = k << 1;
+      tmp = k + jBcol;
+      tmp_0 = B_4[tmp];
+      if (tmp_0 != 0.0) {
+        B_4[tmp] = tmp_0 / A[k + kAcol];
+        for (i = 0; i < k; i++) {
+          B_4[jBcol] -= B_4[tmp] * A[kAcol];
+        }
+      }
+    }
+  }
+}
+
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void linsolve_b(const real_T A[4], const real_T B_1[6], real_T C[6])
+{
+  int32_T j;
+  for (j = 0; j < 3; j++) {
+    int32_T C_tmp;
+    C_tmp = j << 1;
+    C[C_tmp] = B_1[C_tmp];
+    C[C_tmp + 1] = B_1[C_tmp + 1];
+  }
+
+  trisolve_o(A, C);
+}
+
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void mtimes(const real_T A[9], const real_T B_2[9], real_T C[9])
 {
   int32_T i;
   int32_T j;
@@ -545,14 +769,14 @@ static void mtimes(const real_T A[9], const real_T B_0[9], real_T C[9])
     for (i = 0; i < 3; i++) {
       int32_T aoffset;
       aoffset = i * 3;
-      C[coffset + i] = (A[aoffset + 1] * B_0[j + 3] + A[aoffset] * B_0[j]) +
-        A[aoffset + 2] * B_0[j + 6];
+      C[coffset + i] = (A[aoffset + 1] * B_2[j + 3] + A[aoffset] * B_2[j]) +
+        A[aoffset + 2] * B_2[j + 6];
     }
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static real_T xnrm2_g(int32_T n, const real_T x[12], int32_T ix0)
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static real_T xnrm2_g(int32_T n, const real_T x[15], int32_T ix0)
 {
   real_T y;
   int32_T k;
@@ -587,9 +811,9 @@ static real_T xnrm2_g(int32_T n, const real_T x[12], int32_T ix0)
   return y;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void xgemv(int32_T m, int32_T n, const real_T A[12], int32_T ia0, const
-                  real_T x[12], int32_T ix0, real_T y[3])
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgemv_g(int32_T m, int32_T n, const real_T A[15], int32_T ia0, const
+                    real_T x[15], int32_T ix0, real_T y[3])
 {
   int32_T b_iy;
   int32_T iyend;
@@ -599,8 +823,8 @@ static void xgemv(int32_T m, int32_T n, const real_T A[12], int32_T ia0, const
       memset(&y[0], 0, (uint32_T)n * sizeof(real_T));
     }
 
-    b = ((n - 1) << 2) + ia0;
-    for (b_iy = ia0; b_iy <= b; b_iy += 4) {
+    b = (n - 1) * 5 + ia0;
+    for (b_iy = ia0; b_iy <= b; b_iy += 5) {
       real_T c;
       int32_T d;
       c = 0.0;
@@ -609,15 +833,15 @@ static void xgemv(int32_T m, int32_T n, const real_T A[12], int32_T ia0, const
         c += x[((ix0 + iyend) - b_iy) - 1] * A[iyend - 1];
       }
 
-      iyend = (b_iy - ia0) >> 2;
+      iyend = div_nde_s32_floor(b_iy - ia0, 5);
       y[iyend] += c;
     }
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
-                  y[3], real_T A[12], int32_T ia0)
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgerc_a(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+                    real_T y[3], real_T A[15], int32_T ia0)
 {
   int32_T ijA;
   int32_T j;
@@ -636,15 +860,15 @@ static void xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
         }
       }
 
-      jA += 4;
+      jA += 5;
     }
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[6])
 {
-  real_T b_A[12];
+  real_T b_A[15];
   real_T R[9];
   real_T tau[3];
   real_T work[3];
@@ -655,11 +879,11 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
   int32_T lastv;
   mtimes(S, A, R);
   for (i = 0; i < 3; i++) {
-    ii = i << 2;
-    b_A[ii] = R[3 * i];
-    b_A[ii + 1] = R[3 * i + 1];
-    b_A[ii + 2] = R[3 * i + 2];
-    b_A[ii + 3] = Ns[i];
+    b_A[5 * i] = R[3 * i];
+    b_A[5 * i + 1] = R[3 * i + 1];
+    b_A[5 * i + 2] = R[3 * i + 2];
+    b_A[5 * i + 3] = Ns[i];
+    b_A[5 * i + 4] = Ns[i + 3];
     work[i] = 0.0;
   }
 
@@ -667,11 +891,11 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
     real_T atmp;
     real_T beta1;
     int32_T c_tmp;
-    ii = (i << 2) + i;
+    ii = i * 5 + i;
     atmp = b_A[ii];
     lastv = ii + 2;
     tau[i] = 0.0;
-    beta1 = xnrm2_g(3 - i, b_A, ii + 2);
+    beta1 = xnrm2_g(4 - i, b_A, ii + 2);
     if (beta1 != 0.0) {
       beta1 = rt_hypotd_snf(b_A[ii], beta1);
       if (b_A[ii] >= 0.0) {
@@ -680,7 +904,7 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
 
       if (fabs(beta1) < 1.0020841800044864E-292) {
         knt = 0;
-        c_tmp = (ii - i) + 4;
+        c_tmp = (ii - i) + 5;
         do {
           knt++;
           for (coltop = lastv; coltop <= c_tmp; coltop++) {
@@ -691,7 +915,7 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
           atmp *= 9.9792015476736E+291;
         } while ((fabs(beta1) < 1.0020841800044864E-292) && (knt < 20));
 
-        beta1 = rt_hypotd_snf(atmp, xnrm2_g(3 - i, b_A, ii + 2));
+        beta1 = rt_hypotd_snf(atmp, xnrm2_g(4 - i, b_A, ii + 2));
         if (atmp >= 0.0) {
           beta1 = -beta1;
         }
@@ -710,7 +934,7 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
       } else {
         tau[i] = (beta1 - b_A[ii]) / beta1;
         atmp = 1.0 / (b_A[ii] - beta1);
-        coltop = (ii - i) + 4;
+        coltop = (ii - i) + 5;
         for (knt = lastv; knt <= coltop; knt++) {
           b_A[knt - 1] *= atmp;
         }
@@ -725,8 +949,8 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
       b_A[ii] = 1.0;
       if (tau[i] != 0.0) {
         boolean_T exitg2;
-        lastv = 4 - i;
-        knt = (ii - i) + 3;
+        lastv = 5 - i;
+        knt = (ii - i) + 4;
         while ((lastv > 0) && (b_A[knt] == 0.0)) {
           lastv--;
           knt--;
@@ -736,7 +960,7 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
         exitg2 = false;
         while ((!exitg2) && (knt > 0)) {
           int32_T exitg1;
-          coltop = (((knt - 1) << 2) + ii) + 4;
+          coltop = ((knt - 1) * 5 + ii) + 5;
           c_tmp = coltop;
           do {
             exitg1 = 0;
@@ -762,8 +986,8 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
       }
 
       if (lastv > 0) {
-        xgemv(lastv, knt, b_A, ii + 5, b_A, ii + 1, work);
-        xgerc(lastv, knt, -tau[i], ii + 1, work, b_A, ii + 5);
+        xgemv_g(lastv, knt, b_A, ii + 6, b_A, ii + 1, work);
+        xgerc_a(lastv, knt, -tau[i], ii + 1, work, b_A, ii + 6);
       }
 
       b_A[ii] = beta1;
@@ -772,7 +996,7 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
 
   for (i = 0; i < 3; i++) {
     for (ii = 0; ii <= i; ii++) {
-      R[ii + 3 * i] = b_A[(i << 2) + ii];
+      R[ii + 3 * i] = b_A[5 * i + ii];
     }
 
     for (ii = i + 2; ii < 4; ii++) {
@@ -787,7 +1011,7 @@ static void qrFactor_j(const real_T A[9], real_T S[9], const real_T Ns[3])
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static real_T xnrm2_gw(int32_T n, const real_T x[18], int32_T ix0)
 {
   real_T y;
@@ -823,9 +1047,9 @@ static real_T xnrm2_gw(int32_T n, const real_T x[18], int32_T ix0)
   return y;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void xgemv_g(int32_T m, int32_T n, const real_T A[18], int32_T ia0, const
-                    real_T x[18], int32_T ix0, real_T y[3])
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgemv_gp(int32_T m, int32_T n, const real_T A[18], int32_T ia0,
+                     const real_T x[18], int32_T ix0, real_T y[3])
 {
   int32_T b_iy;
   int32_T iyend;
@@ -851,9 +1075,9 @@ static void xgemv_g(int32_T m, int32_T n, const real_T A[18], int32_T ia0, const
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void xgerc_a(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-                    real_T y[3], real_T A[18], int32_T ia0)
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgerc_aq(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+                     real_T y[3], real_T A[18], int32_T ia0)
 {
   int32_T ijA;
   int32_T j;
@@ -877,7 +1101,7 @@ static void xgerc_a(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void qrFactor_jq(const real_T A[9], real_T S[9], const real_T Ns[9])
 {
   real_T b_A[18];
@@ -999,8 +1223,8 @@ static void qrFactor_jq(const real_T A[9], real_T S[9], const real_T Ns[9])
       }
 
       if (lastv > 0) {
-        xgemv_g(lastv, knt, b_A, ii + 7, b_A, ii + 1, work);
-        xgerc_a(lastv, knt, -tau[i], ii + 1, work, b_A, ii + 7);
+        xgemv_gp(lastv, knt, b_A, ii + 7, b_A, ii + 1, work);
+        xgerc_aq(lastv, knt, -tau[i], ii + 1, work, b_A, ii + 7);
       }
 
       b_A[ii] = beta1;
@@ -1024,7 +1248,7 @@ static void qrFactor_jq(const real_T A[9], real_T S[9], const real_T Ns[9])
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static real_T xnrm2_gwq(int32_T n, const real_T x[9], int32_T ix0)
 {
   real_T y;
@@ -1060,7 +1284,7 @@ static real_T xnrm2_gwq(int32_T n, const real_T x[9], int32_T ix0)
   return y;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static real_T xdotc(int32_T n, const real_T x[9], int32_T ix0, const real_T y[9],
                     int32_T iy0)
 {
@@ -1076,7 +1300,7 @@ static real_T xdotc(int32_T n, const real_T x[9], int32_T ix0, const real_T y[9]
   return d;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T iy0)
 {
   int32_T k;
@@ -1089,7 +1313,7 @@ static void xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T iy0)
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static real_T xnrm2_gwqu(int32_T n, const real_T x[3], int32_T ix0)
 {
   real_T y;
@@ -1125,7 +1349,7 @@ static real_T xnrm2_gwqu(int32_T n, const real_T x[3], int32_T ix0)
   return y;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void xaxpy_c(int32_T n, real_T a, const real_T x[9], int32_T ix0, real_T
                     y[3], int32_T iy0)
 {
@@ -1139,7 +1363,7 @@ static void xaxpy_c(int32_T n, real_T a, const real_T x[9], int32_T ix0, real_T
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void xaxpy_cs(int32_T n, real_T a, const real_T x[3], int32_T ix0, real_T
                      y[9], int32_T iy0)
 {
@@ -1153,7 +1377,7 @@ static void xaxpy_cs(int32_T n, real_T a, const real_T x[3], int32_T ix0, real_T
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void xswap(real_T x[9], int32_T ix0, int32_T iy0)
 {
   real_T temp;
@@ -1168,7 +1392,7 @@ static void xswap(real_T x[9], int32_T ix0, int32_T iy0)
   x[iy0 + 1] = temp;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void xrotg(real_T *a, real_T *b, real_T *c, real_T *s)
 {
   real_T absa;
@@ -1212,7 +1436,7 @@ static void xrotg(real_T *a, real_T *b, real_T *c, real_T *s)
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void xrot(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s)
 {
   real_T temp;
@@ -1230,7 +1454,7 @@ static void xrot(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s)
   x[ix0 + 1] = temp_tmp * c + temp * s;
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void svd(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
 {
   real_T b_A[9];
@@ -1615,9 +1839,9 @@ static void svd(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
   s[2] = b_s[2];
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void xgemv_gp(int32_T m, int32_T n, const real_T A[9], int32_T ia0, const
-                     real_T x[9], int32_T ix0, real_T y[3])
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgemv_gpk(int32_T m, int32_T n, const real_T A[9], int32_T ia0,
+                      const real_T x[9], int32_T ix0, real_T y[3])
 {
   int32_T b_iy;
   int32_T iyend;
@@ -1643,9 +1867,9 @@ static void xgemv_gp(int32_T m, int32_T n, const real_T A[9], int32_T ia0, const
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-static void xgerc_aq(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-                     real_T y[3], real_T A[9], int32_T ia0)
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+static void xgerc_aq4(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+                      real_T y[3], real_T A[9], int32_T ia0)
 {
   int32_T ijA;
   int32_T j;
@@ -1669,7 +1893,7 @@ static void xgerc_aq(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
   }
 }
 
-/* Function for MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
+/* Function for MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
 static void qr(const real_T A[9], real_T Q[9], real_T R[9])
 {
   real_T b_A[9];
@@ -1786,8 +2010,8 @@ static void qr(const real_T A[9], real_T Q[9], real_T R[9])
       }
 
       if (b_lastv > 0) {
-        xgemv_gp(b_lastv, knt, b_A, ii + 4, b_A, ii + 1, work);
-        xgerc_aq(b_lastv, knt, -tau[itau], ii + 1, work, b_A, ii + 4);
+        xgemv_gpk(b_lastv, knt, b_A, ii + 4, b_A, ii + 1, work);
+        xgerc_aq4(b_lastv, knt, -tau[itau], ii + 1, work, b_A, ii + 4);
       }
 
       b_A[ii] = beta1;
@@ -1849,8 +2073,8 @@ static void qr(const real_T A[9], real_T Q[9], real_T R[9])
       }
 
       if (knt > 0) {
-        xgemv_gp(knt, b_coltop, b_A, b_lastv, b_A, b_lastv - 3, work);
-        xgerc_aq(knt, b_coltop, -tau[ii], b_lastv - 3, work, b_A, b_lastv);
+        xgemv_gpk(knt, b_coltop, b_A, b_lastv, b_A, b_lastv - 3, work);
+        xgerc_aq4(knt, b_coltop, -tau[ii], b_lastv - 3, work, b_A, b_lastv);
       }
 
       knt = (b_lastv - ii) - 1;
@@ -1874,40 +2098,91 @@ static void qr(const real_T A[9], real_T Q[9], real_T R[9])
   }
 }
 
-/* Model step function */
-void RC_Model_KF_vout_for_MCU_step(void)
+real_T rt_urand_Upu32_Yd_f_pw_snf(uint32_T *u)
 {
+  uint32_T hi;
+  uint32_T lo;
+
+  /* Uniform random number generator (random number between 0 and 1)
+
+     #define IA      16807                      magic multiplier = 7^5
+     #define IM      2147483647                 modulus = 2^31-1
+     #define IQ      127773                     IM div IA
+     #define IR      2836                       IM modulo IA
+     #define S       4.656612875245797e-10      reciprocal of 2^31-1
+     test = IA * (seed % IQ) - IR * (seed/IQ)
+     seed = test < 0 ? (test + IM) : test
+     return (seed*S)
+   */
+  lo = *u % 127773U * 16807U;
+  hi = *u / 127773U * 2836U;
+  if (lo < hi) {
+    *u = 2147483647U - (hi - lo);
+  } else {
+    *u = lo - hi;
+  }
+
+  return (real_T)*u * 4.6566128752457969E-10;
+}
+
+real_T rt_nrand_Upu32_Yd_f_pw_snf(uint32_T *u)
+{
+  real_T si;
+  real_T sr;
+  real_T y;
+
+  /* Normal (Gaussian) random number generator */
+  do {
+    sr = 2.0 * rt_urand_Upu32_Yd_f_pw_snf(u) - 1.0;
+    si = 2.0 * rt_urand_Upu32_Yd_f_pw_snf(u) - 1.0;
+    si = sr * sr + si * si;
+  } while (si > 1.0);
+
+  y = sqrt(-2.0 * log(si) / si) * sr;
+  return y;
+}
+
+/* Model step function */
+void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
+{
+  real_T Hnew_0[9];
   real_T Ss[9];
-  real_T a__1[9];
   real_T rtb_A[9];
   real_T rtb_SNew[9];
   real_T rtb_SNew_0[9];
   real_T rtb_Zs[9];
-  real_T Hnew[3];
-  real_T b_c[3];
-  real_T rtb_C[3];
-  real_T rtb_L[3];
-  real_T rtb_M[3];
+  real_T Hnew[6];
+  real_T f[6];
+  real_T rtb_C[6];
+  real_T rtb_L[6];
+  real_T rtb_M[6];
+  real_T RsInv[4];
+  real_T yCovSqrt[4];
+  real_T yCovSqrt_0[4];
+  real_T c[3];
+  real_T rtb_Add_d[3];
   real_T s[3];
-  real_T Product3_idx_1;
-  real_T Product3_idx_2;
+  real_T rtb_Reshapey[2];
+  real_T rtb_Reshapey_0[2];
   real_T a_vo;
-  real_T a_vo_tmp;
   real_T a_vo_tmp_tmp;
   real_T absxk;
+  real_T b_t;
+  real_T r;
+  real_T rho;
   real_T rtb_Cbulk;
   real_T rtb_Csurface;
   real_T rtb_Rb;
   real_T rtb_Rt;
-  real_T scale;
-  real_T yCovSqrt;
+  real_T t;
+  int32_T Hnew_tmp;
+  int32_T Ss_tmp;
   int32_T i;
   int32_T iAcol;
-  int32_T j;
-  boolean_T errorCondition;
+  static const int8_T tmp[6] = { 0, 1, 0, 0, 1, 0 };
 
-  /* Delay: '<S1>/MemoryP' incorporates:
-   *  Constant: '<S1>/P0'
+  /* Delay: '<S2>/MemoryP' incorporates:
+   *  Constant: '<S2>/P0'
    */
   if (rtDW.icLoad) {
     memcpy(&rtDW.MemoryP_DSTATE[0], &rtConstP.P0_Value[0], 9U * sizeof(real_T));
@@ -1917,85 +2192,111 @@ void RC_Model_KF_vout_for_MCU_step(void)
    *  Delay: '<Root>/Delay'
    */
   rtb_Rt = look1_binlca(rtDW.Delay_DSTATE, rtConstP.pooled3,
-                        rtConstP.Rt_tableData, 6U);
+                        rtConstP.Rt_tableData, 11U);
 
   /* Lookup_n-D: '<Root>/Rb' incorporates:
    *  Delay: '<Root>/Delay'
    */
   rtb_Rb = look1_binlca(rtDW.Delay_DSTATE, rtConstP.pooled3, rtConstP.pooled4,
-                        6U);
+                        11U);
 
   /* Lookup_n-D: '<Root>/Cbulk' incorporates:
    *  Delay: '<Root>/Delay'
    */
   rtb_Cbulk = look1_binlca(rtDW.Delay_DSTATE, rtConstP.pooled3,
-    rtConstP.Cbulk_tableData, 6U);
+    rtConstP.Cbulk_tableData, 11U);
 
   /* Lookup_n-D: '<Root>/Csurface' incorporates:
    *  Delay: '<Root>/Delay'
    */
   rtb_Csurface = look1_binlca(rtDW.Delay_DSTATE, rtConstP.pooled3,
-    rtConstP.Csurface_tableData, 6U);
+    rtConstP.Csurface_tableData, 11U);
 
   /* MATLAB Function: '<Root>/Matrix Generator' */
-  rtb_C[0] = 0.0;
-  rtb_C[1] = 0.0;
-  rtb_C[2] = 1.0;
-  Product3_idx_2 = 2.0 * rtb_Cbulk * rtb_Rb;
+  for (i = 0; i < 6; i++) {
+    rtb_C[i] = tmp[i];
+  }
+
+  b_t = 2.0 * rtb_Cbulk * rtb_Rb;
   a_vo_tmp_tmp = 2.0 * rtb_Csurface * rtb_Rb;
-  a_vo_tmp = 1.0 / a_vo_tmp_tmp;
-  a_vo = 1.0 / Product3_idx_2 - a_vo_tmp;
-  yCovSqrt = exp(-0.1 / (2.0 * rtb_Rb * rtb_Cbulk));
-  scale = exp(-0.1 / (2.0 * rtb_Rb * rtb_Csurface));
+  rho = 1.0 / a_vo_tmp_tmp;
+  a_vo = 1.0 / b_t - rho;
+  r = exp(-0.1 / (2.0 * rtb_Rb * rtb_Cbulk));
+  t = exp(-0.1 / (2.0 * rtb_Rb * rtb_Csurface));
   absxk = exp(-a_vo * 0.1);
-  rtb_A[0] = yCovSqrt;
-  rtb_A[3] = 1.0 - yCovSqrt;
+  rtb_A[0] = r;
+  rtb_A[3] = 1.0 - r;
   rtb_A[6] = 0.0;
-  rtb_A[1] = 1.0 - scale;
-  rtb_A[4] = scale;
+  rtb_A[1] = 1.0 - t;
+  rtb_A[4] = t;
   rtb_A[7] = 0.0;
-  rtb_A[2] = (-1.0 / Product3_idx_2 + a_vo_tmp) * (1.0 / a_vo * (absxk - 1.0));
+  rtb_A[2] = (-1.0 / b_t + rho) * (1.0 / a_vo * (absxk - 1.0));
   rtb_A[5] = 0.0;
   rtb_A[8] = absxk;
 
-  /* Outputs for Atomic SubSystem: '<S1>/CalculatePL' */
-  /* MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' incorporates:
-   *  Constant: '<S23>/Bbar_'
-   *  Constant: '<S23>/Qbar_'
-   *  Constant: '<S23>/Rbar_'
-   *  Delay: '<S1>/MemoryP'
+  /* Outputs for Atomic SubSystem: '<S2>/CalculatePL' */
+  /* MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' incorporates:
+   *  Constant: '<S24>/Bbar_'
+   *  Constant: '<S24>/Qbar_'
+   *  Constant: '<S24>/Rbar_'
+   *  Delay: '<S2>/MemoryP'
    */
-  yCovSqrt = qrFactor(rtb_C, rtDW.MemoryP_DSTATE, 1.0);
-  for (j = 0; j < 3; j++) {
-    Hnew[j] = 0.0;
+  qrFactor(rtb_C, rtDW.MemoryP_DSTATE, rtConstP.Rbar_Value, yCovSqrt);
+  for (i = 0; i < 3; i++) {
     for (iAcol = 0; iAcol < 3; iAcol++) {
-      i = 3 * iAcol + j;
-      Ss[i] = 0.0;
-      Ss[i] += rtDW.MemoryP_DSTATE[j] * rtDW.MemoryP_DSTATE[iAcol];
-      Ss[i] += rtDW.MemoryP_DSTATE[j + 3] * rtDW.MemoryP_DSTATE[iAcol + 3];
-      Ss[i] += rtDW.MemoryP_DSTATE[j + 6] * rtDW.MemoryP_DSTATE[iAcol + 6];
-      Hnew[j] += Ss[i] * rtb_C[iAcol];
+      Hnew_tmp = 3 * iAcol + i;
+      Ss[Hnew_tmp] = 0.0;
+      Ss[Hnew_tmp] += rtDW.MemoryP_DSTATE[i] * rtDW.MemoryP_DSTATE[iAcol];
+      Ss[Hnew_tmp] += rtDW.MemoryP_DSTATE[i + 3] * rtDW.MemoryP_DSTATE[iAcol + 3];
+      Ss[Hnew_tmp] += rtDW.MemoryP_DSTATE[i + 6] * rtDW.MemoryP_DSTATE[iAcol + 6];
+    }
+
+    for (iAcol = 0; iAcol < 2; iAcol++) {
+      Hnew_tmp = 3 * iAcol + i;
+      Hnew[Hnew_tmp] = 0.0;
+      Hnew[Hnew_tmp] += Ss[i] * rtb_C[iAcol];
+      Hnew[Hnew_tmp] += Ss[i + 3] * rtb_C[iAcol + 2];
+      Hnew[Hnew_tmp] += Ss[i + 6] * rtb_C[iAcol + 4];
     }
   }
 
-  for (j = 0; j < 3; j++) {
-    b_c[j] = (rtb_A[j + 3] * Hnew[1] + rtb_A[j] * Hnew[0]) + rtb_A[j + 6] *
-      Hnew[2];
+  for (i = 0; i < 2; i++) {
+    for (iAcol = 0; iAcol < 3; iAcol++) {
+      rtb_L[i + (iAcol << 1)] = (Hnew[3 * i + 1] * rtb_A[iAcol + 3] + Hnew[3 * i]
+        * rtb_A[iAcol]) + Hnew[3 * i + 2] * rtb_A[iAcol + 6];
+    }
   }
 
-  trisolve(yCovSqrt, b_c);
-  rtb_L[0] = b_c[0];
-  rtb_L[1] = b_c[1];
-  rtb_L[2] = b_c[2];
-  trisolve(yCovSqrt, rtb_L);
-  b_c[0] = Hnew[0];
-  b_c[1] = Hnew[1];
-  b_c[2] = Hnew[2];
-  trisolve(yCovSqrt, b_c);
-  rtb_M[0] = b_c[0];
-  rtb_M[1] = b_c[1];
-  rtb_M[2] = b_c[2];
-  trisolve(yCovSqrt, rtb_M);
+  linsolve(yCovSqrt, rtb_L, rtb_M);
+  yCovSqrt_0[0] = yCovSqrt[0];
+  yCovSqrt_0[1] = yCovSqrt[2];
+  yCovSqrt_0[2] = yCovSqrt[1];
+  yCovSqrt_0[3] = yCovSqrt[3];
+  linsolve_b(yCovSqrt_0, rtb_M, f);
+  for (i = 0; i < 2; i++) {
+    rtb_L[3 * i] = f[i];
+    rtb_L[3 * i + 1] = f[i + 2];
+    rtb_L[3 * i + 2] = f[i + 4];
+  }
+
+  for (i = 0; i < 3; i++) {
+    Hnew_tmp = i << 1;
+    f[Hnew_tmp] = Hnew[i];
+    f[Hnew_tmp + 1] = Hnew[i + 3];
+  }
+
+  linsolve(yCovSqrt, f, rtb_M);
+  yCovSqrt_0[0] = yCovSqrt[0];
+  yCovSqrt_0[1] = yCovSqrt[2];
+  yCovSqrt_0[2] = yCovSqrt[1];
+  yCovSqrt_0[3] = yCovSqrt[3];
+  linsolve_b(yCovSqrt_0, rtb_M, f);
+  for (i = 0; i < 2; i++) {
+    rtb_M[3 * i] = f[i];
+    rtb_M[3 * i + 1] = f[i + 2];
+    rtb_M[3 * i + 2] = f[i + 4];
+  }
+
   for (i = 0; i < 9; i++) {
     Ss[i] = 0.0;
     rtb_Zs[i] = rtDW.MemoryP_DSTATE[i];
@@ -2004,292 +2305,424 @@ void RC_Model_KF_vout_for_MCU_step(void)
   Ss[0] = 1.0;
   Ss[4] = 1.0;
   Ss[8] = 1.0;
-  for (j = 0; j < 3; j++) {
-    yCovSqrt = rtb_C[j];
-    rtb_SNew[3 * j] = Ss[3 * j] - rtb_M[0] * yCovSqrt;
-    iAcol = 3 * j + 1;
-    rtb_SNew[iAcol] = Ss[iAcol] - rtb_M[1] * yCovSqrt;
-    iAcol = 3 * j + 2;
-    rtb_SNew[iAcol] = Ss[iAcol] - rtb_M[2] * yCovSqrt;
-    Hnew[j] = rtb_M[j];
+  for (i = 0; i < 3; i++) {
+    for (iAcol = 0; iAcol < 3; iAcol++) {
+      Hnew_tmp = iAcol << 1;
+      Ss_tmp = 3 * iAcol + i;
+      rtb_SNew[Ss_tmp] = Ss[Ss_tmp] - (rtb_C[Hnew_tmp + 1] * rtb_M[i + 3] +
+        rtb_C[Hnew_tmp] * rtb_M[i]);
+    }
+
+    Hnew[i] = 0.0;
+    Hnew[i] += rtb_M[i] * 0.31622776601683794;
+    r = rtb_M[i + 3];
+    Hnew[i] += r * 0.0;
+    Hnew[i + 3] = 0.0;
+    Hnew[i + 3] += rtb_M[i] * 0.0;
+    Hnew[i + 3] += r * 0.31622776601683794;
   }
 
   qrFactor_j(rtb_SNew, rtb_Zs, Hnew);
+  RsInv[0] = 3.1622776601683791;
+  RsInv[1] = -0.0;
+  RsInv[2] = -0.0;
+  RsInv[3] = 3.1622776601683791;
+  for (i = 0; i < 3; i++) {
+    Hnew[i] = 0.0;
+    Hnew[i + 3] = 0.0;
+  }
+
   memcpy(&Ss[0], &rtb_Zs[0], 9U * sizeof(real_T));
-  for (j = 0; j < 3; j++) {
-    rtb_SNew[3 * j] = rtb_A[3 * j];
-    iAcol = 3 * j + 1;
-    rtb_SNew[iAcol] = rtb_A[iAcol];
-    iAcol = 3 * j + 2;
-    rtb_SNew[iAcol] = rtb_A[iAcol];
+  for (i = 0; i < 2; i++) {
+    yCovSqrt[i] = 0.0;
+    iAcol = i << 1;
+    r = RsInv[iAcol];
+    yCovSqrt[i] += r * 3.1622776601683791;
+    t = RsInv[iAcol + 1];
+    yCovSqrt[i] += t * -0.0;
+    yCovSqrt[i + 2] = 0.0;
+    yCovSqrt[i + 2] += r * -0.0;
+    yCovSqrt[i + 2] += t * 3.1622776601683791;
+  }
+
+  for (i = 0; i < 3; i++) {
+    f[i] = 0.0;
+    f[i] += 0.0 * yCovSqrt[0];
+    f[i] += 0.0 * yCovSqrt[1];
+    f[i + 3] = 0.0;
+    f[i + 3] += 0.0 * yCovSqrt[2];
+    f[i + 3] += 0.0 * yCovSqrt[3];
+    for (iAcol = 0; iAcol < 3; iAcol++) {
+      Hnew_tmp = iAcol << 1;
+      Ss_tmp = 3 * iAcol + i;
+      rtb_SNew[Ss_tmp] = rtb_A[Ss_tmp] - (rtb_C[Hnew_tmp + 1] * f[i + 3] +
+        rtb_C[Hnew_tmp] * f[i]);
+    }
   }
 
   qrFactor_jq(rtb_SNew, Ss, rtConstP.Qbar_Value);
-  for (j = 0; j < 3; j++) {
-    rtb_SNew[3 * j] = Ss[j];
-    rtb_SNew[3 * j + 1] = Ss[j + 3];
-    rtb_SNew[3 * j + 2] = Ss[j + 6];
+  for (i = 0; i < 3; i++) {
+    rtb_SNew[3 * i] = Ss[i];
+    rtb_SNew[3 * i + 1] = Ss[i + 3];
+    rtb_SNew[3 * i + 2] = Ss[i + 6];
   }
 
-  for (j = 0; j < 3; j++) {
-    if (1 - j >= 0) {
-      memset(&rtb_SNew[(j << 2) + 1], 0, (uint32_T)((1 - j) + 1) * sizeof(real_T));
-    }
-  }
-
-  errorCondition = (rtb_SNew[0] == 0.0);
-  if (!errorCondition) {
-    errorCondition = (rtb_SNew[4] == 0.0);
-  }
-
-  if (!errorCondition) {
-    errorCondition = (rtb_SNew[8] == 0.0);
-  }
-
-  if (errorCondition) {
-    boolean_T exitg2;
-    for (j = 0; j < 3; j++) {
-      for (iAcol = 0; iAcol < 3; iAcol++) {
-        i = 3 * iAcol + j;
-        rtb_SNew_0[i] = 0.0;
-        rtb_SNew_0[i] += rtb_SNew[3 * j] * rtb_SNew[3 * iAcol];
-        rtb_SNew_0[i] += rtb_SNew[3 * j + 1] * rtb_SNew[3 * iAcol + 1];
-        rtb_SNew_0[i] += rtb_SNew[3 * j + 2] * rtb_SNew[3 * iAcol + 2];
+  for (Hnew_tmp = 0; Hnew_tmp < 2; Hnew_tmp++) {
+    int8_T p;
+    boolean_T errorCondition;
+    for (i = 0; i < 3; i++) {
+      if (1 - i >= 0) {
+        memset(&rtb_SNew[(i << 2) + 1], 0, (uint32_T)((1 - i) + 1) * sizeof
+               (real_T));
       }
     }
 
-    for (j = 0; j < 9; j++) {
-      yCovSqrt = rtb_SNew_0[j];
-      if (errorCondition && (rtIsInf(yCovSqrt) || rtIsNaN(yCovSqrt))) {
-        errorCondition = false;
-      }
-
-      Ss[j] = yCovSqrt;
-    }
-
-    if (errorCondition) {
-      svd(Ss, a__1, s, rtb_SNew_0);
-    } else {
-      s[0] = (rtNaN);
-      s[1] = (rtNaN);
-      s[2] = (rtNaN);
-      for (j = 0; j < 9; j++) {
-        rtb_SNew_0[j] = (rtNaN);
-      }
-    }
-
-    memset(&Ss[0], 0, 9U * sizeof(real_T));
-    Ss[0] = s[0];
-    Ss[4] = s[1];
-    Ss[8] = s[2];
-    for (j = 0; j < 9; j++) {
-      Ss[j] = sqrt(Ss[j]);
-    }
-
-    for (j = 0; j < 3; j++) {
-      for (iAcol = 0; iAcol < 3; iAcol++) {
-        i = 3 * iAcol + j;
-        rtb_SNew[i] = 0.0;
-        rtb_SNew[i] += Ss[3 * j] * rtb_SNew_0[iAcol];
-        rtb_SNew[i] += Ss[3 * j + 1] * rtb_SNew_0[iAcol + 3];
-        rtb_SNew[i] += Ss[3 * j + 2] * rtb_SNew_0[iAcol + 6];
-      }
-    }
-
-    errorCondition = true;
-    j = 0;
-    exitg2 = false;
-    while ((!exitg2) && (j < 3)) {
-      int32_T exitg1;
-      iAcol = j + 1;
-      do {
-        exitg1 = 0;
-        if (iAcol + 1 < 4) {
-          if (!(rtb_SNew[3 * j + iAcol] == 0.0)) {
-            errorCondition = false;
-            exitg1 = 1;
-          } else {
-            iAcol++;
-          }
-        } else {
-          j++;
-          exitg1 = 2;
-        }
-      } while (exitg1 == 0);
-
-      if (exitg1 == 1) {
-        exitg2 = true;
-      }
+    p = 0;
+    errorCondition = (rtb_SNew[0] == 0.0);
+    if (!errorCondition) {
+      errorCondition = (rtb_SNew[4] == 0.0);
     }
 
     if (!errorCondition) {
-      memcpy(&rtb_SNew_0[0], &rtb_SNew[0], 9U * sizeof(real_T));
-      qr(rtb_SNew_0, a__1, rtb_SNew);
+      errorCondition = (rtb_SNew[8] == 0.0);
     }
-  } else {
-    Hnew[0] = 0.0;
-    Hnew[1] = 0.0;
-    Hnew[2] = 0.0;
-    for (j = 0; j < 3; j++) {
-      iAcol = 3 * j;
-      yCovSqrt = Hnew[j];
-      for (i = 0; i < j; i++) {
-        yCovSqrt -= rtb_SNew[i + iAcol] * Hnew[i];
+
+    if (errorCondition) {
+      p = 2;
+    } else {
+      rtb_Add_d[0] = Hnew[3 * Hnew_tmp];
+      rtb_Add_d[1] = Hnew[3 * Hnew_tmp + 1];
+      rtb_Add_d[2] = Hnew[3 * Hnew_tmp + 2];
+      for (i = 0; i < 3; i++) {
+        iAcol = 3 * i;
+        r = rtb_Add_d[i];
+        for (Ss_tmp = 0; Ss_tmp < i; Ss_tmp++) {
+          r -= rtb_SNew[Ss_tmp + iAcol] * rtb_Add_d[Ss_tmp];
+        }
+
+        rtb_Add_d[i] = r / rtb_SNew[i + iAcol];
       }
 
-      Hnew[j] = yCovSqrt / rtb_SNew[j + iAcol];
+      t = 3.3121686421112381E-170;
+      absxk = fabs(rtb_Add_d[0]);
+      if (absxk > 3.3121686421112381E-170) {
+        r = 1.0;
+        t = absxk;
+      } else {
+        b_t = absxk / 3.3121686421112381E-170;
+        r = b_t * b_t;
+      }
+
+      absxk = fabs(rtb_Add_d[1]);
+      if (absxk > t) {
+        b_t = t / absxk;
+        r = r * b_t * b_t + 1.0;
+        t = absxk;
+      } else {
+        b_t = absxk / t;
+        r += b_t * b_t;
+      }
+
+      rho = fabs(rtb_Add_d[2]);
+      if (rho > t) {
+        b_t = t / rho;
+        r = r * b_t * b_t + 1.0;
+        t = rho;
+      } else {
+        b_t = rho / t;
+        r += b_t * b_t;
+      }
+
+      r = t * sqrt(r);
+      if (r >= 1.0) {
+        p = 1;
+      } else {
+        absxk = sqrt(1.0 - r * r);
+        if (rho == 0.0) {
+          c[2] = 1.0;
+          s[2] = 0.0;
+        } else {
+          t = absxk + rho;
+          absxk /= t;
+          b_t = rtb_Add_d[2] / t;
+          rho = rt_hypotd_snf(absxk, fabs(b_t));
+          c[2] = absxk / rho;
+          absxk /= absxk;
+          s[2] = absxk * b_t / rho;
+          absxk *= rho * t;
+        }
+
+        rtb_Add_d[2] = 0.0;
+        t = fabs(rtb_Add_d[1]);
+        if (t == 0.0) {
+          c[1] = 1.0;
+          s[1] = 0.0;
+        } else if (absxk == 0.0) {
+          c[1] = 0.0;
+          s[1] = 1.0;
+          absxk = rtb_Add_d[1];
+        } else {
+          t += absxk;
+          absxk /= t;
+          b_t = rtb_Add_d[1] / t;
+          rho = rt_hypotd_snf(absxk, fabs(b_t));
+          c[1] = absxk / rho;
+          absxk /= absxk;
+          s[1] = absxk * b_t / rho;
+          absxk *= rho * t;
+        }
+
+        rtb_Add_d[1] = 0.0;
+        r = fabs(absxk);
+        t = fabs(rtb_Add_d[0]);
+        if (t == 0.0) {
+          c[0] = 1.0;
+          s[0] = 0.0;
+        } else if (r == 0.0) {
+          c[0] = 0.0;
+          s[0] = 1.0;
+        } else {
+          t += r;
+          absxk /= t;
+          b_t = rtb_Add_d[0] / t;
+          r = fabs(absxk);
+          rho = rt_hypotd_snf(r, fabs(b_t));
+          c[0] = r / rho;
+          s[0] = absxk / r * b_t / rho;
+        }
+
+        rtb_Add_d[0] = 0.0;
+        for (i = 0; i < 3; i++) {
+          for (iAcol = i + 1; iAcol >= 1; iAcol--) {
+            r = rtb_Add_d[i];
+            Ss_tmp = (3 * i + iAcol) - 1;
+            t = rtb_SNew[Ss_tmp];
+            absxk = s[iAcol - 1];
+            b_t = c[iAcol - 1];
+            rtb_SNew[Ss_tmp] = t * b_t - absxk * r;
+            rtb_Add_d[i] = b_t * r + t * absxk;
+          }
+        }
+      }
     }
 
-    if (Hnew[2] == 0.0) {
-      b_c[2] = 1.0;
-      s[2] = 0.0;
-    } else {
-      b_c[2] = (rtNaN);
-      s[2] = (rtNaN);
-    }
+    if (p != 0) {
+      boolean_T exitg2;
+      for (i = 0; i < 3; i++) {
+        for (iAcol = 0; iAcol < 3; iAcol++) {
+          Ss_tmp = 3 * iAcol + i;
+          rtb_SNew_0[Ss_tmp] = 0.0;
+          rtb_SNew_0[Ss_tmp] += rtb_SNew[3 * i] * rtb_SNew[3 * iAcol];
+          rtb_SNew_0[Ss_tmp] += rtb_SNew[3 * i + 1] * rtb_SNew[3 * iAcol + 1];
+          rtb_SNew_0[Ss_tmp] += rtb_SNew[3 * i + 2] * rtb_SNew[3 * iAcol + 2];
+          Hnew_0[iAcol + 3 * i] = Hnew[3 * Hnew_tmp + iAcol] * Hnew[3 * Hnew_tmp
+            + i];
+        }
+      }
 
-    Hnew[2] = 0.0;
-    if (Hnew[1] == 0.0) {
-      b_c[1] = 1.0;
-      s[1] = 0.0;
-    } else {
-      b_c[1] = (rtNaN);
-      s[1] = (rtNaN);
-    }
+      errorCondition = true;
+      for (i = 0; i < 9; i++) {
+        r = rtb_SNew_0[i] - Hnew_0[i];
+        if (errorCondition && (rtIsInf(r) || rtIsNaN(r))) {
+          errorCondition = false;
+        }
 
-    Hnew[1] = 0.0;
-    if (Hnew[0] == 0.0) {
-      b_c[0] = 1.0;
-      s[0] = 0.0;
-    } else {
-      b_c[0] = (rtNaN);
-      s[0] = (rtNaN);
-    }
+        Ss[i] = r;
+      }
 
-    Hnew[0] = 0.0;
-    for (j = 0; j < 3; j++) {
-      for (iAcol = j + 1; iAcol >= 1; iAcol--) {
-        yCovSqrt = Hnew[j];
-        i = (3 * j + iAcol) - 1;
-        Product3_idx_2 = rtb_SNew[i];
-        a_vo_tmp = s[iAcol - 1];
-        scale = b_c[iAcol - 1];
-        rtb_SNew[i] = Product3_idx_2 * scale - a_vo_tmp * yCovSqrt;
-        Hnew[j] = scale * yCovSqrt + Product3_idx_2 * a_vo_tmp;
+      if (errorCondition) {
+        svd(Ss, Hnew_0, s, rtb_SNew_0);
+      } else {
+        s[0] = (rtNaN);
+        s[1] = (rtNaN);
+        s[2] = (rtNaN);
+        for (i = 0; i < 9; i++) {
+          rtb_SNew_0[i] = (rtNaN);
+        }
+      }
+
+      memset(&Ss[0], 0, 9U * sizeof(real_T));
+      Ss[0] = s[0];
+      Ss[4] = s[1];
+      Ss[8] = s[2];
+      for (i = 0; i < 9; i++) {
+        Ss[i] = sqrt(Ss[i]);
+      }
+
+      for (i = 0; i < 3; i++) {
+        for (iAcol = 0; iAcol < 3; iAcol++) {
+          Ss_tmp = 3 * iAcol + i;
+          rtb_SNew[Ss_tmp] = 0.0;
+          rtb_SNew[Ss_tmp] += Ss[3 * i] * rtb_SNew_0[iAcol];
+          rtb_SNew[Ss_tmp] += Ss[3 * i + 1] * rtb_SNew_0[iAcol + 3];
+          rtb_SNew[Ss_tmp] += Ss[3 * i + 2] * rtb_SNew_0[iAcol + 6];
+        }
+      }
+
+      errorCondition = true;
+      i = 0;
+      exitg2 = false;
+      while ((!exitg2) && (i < 3)) {
+        int32_T exitg1;
+        iAcol = i + 1;
+        do {
+          exitg1 = 0;
+          if (iAcol + 1 < 4) {
+            if (!(rtb_SNew[3 * i + iAcol] == 0.0)) {
+              errorCondition = false;
+              exitg1 = 1;
+            } else {
+              iAcol++;
+            }
+          } else {
+            i++;
+            exitg1 = 2;
+          }
+        } while (exitg1 == 0);
+
+        if (exitg1 == 1) {
+          exitg2 = true;
+        }
+      }
+
+      if (!errorCondition) {
+        memcpy(&rtb_SNew_0[0], &rtb_SNew[0], 9U * sizeof(real_T));
+        qr(rtb_SNew_0, Hnew_0, rtb_SNew);
       }
     }
   }
 
-  for (j = 0; j < 3; j++) {
-    rtb_SNew_0[3 * j] = rtb_SNew[j];
-    rtb_SNew_0[3 * j + 1] = rtb_SNew[j + 3];
-    rtb_SNew_0[3 * j + 2] = rtb_SNew[j + 6];
+  for (i = 0; i < 3; i++) {
+    rtb_SNew_0[3 * i] = rtb_SNew[i];
+    rtb_SNew_0[3 * i + 1] = rtb_SNew[i + 3];
+    rtb_SNew_0[3 * i + 2] = rtb_SNew[i + 6];
   }
 
   memcpy(&rtb_SNew[0], &rtb_SNew_0[0], 9U * sizeof(real_T));
 
-  /* End of MATLAB Function: '<S3>/Discrete-Time SqrtKF - Calculate SLMZ' */
-  /* End of Outputs for SubSystem: '<S1>/CalculatePL' */
+  /* End of MATLAB Function: '<S4>/Discrete-Time SqrtKF - Calculate SLMZ' */
+  /* End of Outputs for SubSystem: '<S2>/CalculatePL' */
 
-  /* Delay: '<S1>/MemoryX' incorporates:
-   *  Constant: '<S1>/X0'
+  /* Product: '<Root>/Divide9' incorporates:
+   *  Constant: '<Root>/Battery Capacity Ah'
+   *  DiscreteIntegrator: '<Root>/Discrete-Time Integrator'
+   */
+  r = rtDW.DiscreteTimeIntegrator_DSTATE / 5.0;
+
+  /* Reshape: '<S2>/Reshapey' incorporates:
+   *  Gain: '<S1>/Output'
+   *  Inport: '<Root>/voltage'
+   *  Lookup_n-D: '<Root>/1-D Lookup Table1'
+   *  RandomNumber: '<S1>/White Noise'
+   *  Sum: '<Root>/Add1'
+   */
+  rtb_Reshapey[0] = rtU.voltage;
+  rtb_Reshapey[1] = look1_binlg(0.001 * rtDW.NextOutput + r, rtConstP.pooled3,
+    rtConstP.pooled6, 11U);
+
+  /* Delay: '<S2>/MemoryX' incorporates:
+   *  Constant: '<S2>/X0'
    */
   if (rtDW.icLoad_o) {
-    rtDW.MemoryX_DSTATE[0] = 12.6;
-    rtDW.MemoryX_DSTATE[1] = 12.6;
-    rtDW.MemoryX_DSTATE[2] = 12.6;
+    rtDW.MemoryX_DSTATE[0] = 0.0;
+    rtDW.MemoryX_DSTATE[1] = 0.0;
+    rtDW.MemoryX_DSTATE[2] = 0.0;
   }
 
-  /* Outputs for Enabled SubSystem: '<S28>/Enabled Subsystem' incorporates:
-   *  EnablePort: '<S51>/Enable'
+  /* Outputs for Enabled SubSystem: '<S29>/Enabled Subsystem' incorporates:
+   *  EnablePort: '<S52>/Enable'
    */
-  /* Sum: '<S51>/Add1' incorporates:
-   *  Delay: '<S1>/MemoryX'
+  /* Sum: '<S52>/Add1' incorporates:
+   *  Delay: '<S2>/MemoryX'
    *  Inport: '<Root>/current'
-   *  Inport: '<Root>/voltage'
    *  MATLAB Function: '<Root>/Matrix Generator'
-   *  Product: '<S51>/Product'
-   *  Product: '<S51>/Product1'
+   *  Product: '<S52>/Product'
+   *  Product: '<S52>/Product1'
    */
-  yCovSqrt = (rtU.voltage - ((0.0 * rtDW.MemoryX_DSTATE[0] + 0.0 *
-    rtDW.MemoryX_DSTATE[1]) + rtDW.MemoryX_DSTATE[2])) - 0.0 * rtU.current;
+  for (i = 0; i < 2; i++) {
+    rtb_Reshapey_0[i] = (rtb_Reshapey[i] - ((rtb_C[i + 2] * rtDW.MemoryX_DSTATE
+      [1] + rtb_C[i] * rtDW.MemoryX_DSTATE[0]) + rtb_C[i + 4] *
+      rtDW.MemoryX_DSTATE[2])) - 0.0 * rtU.current;
+  }
 
-  /* Sum: '<S28>/Add' incorporates:
-   *  Delay: '<S1>/MemoryX'
-   *  Product: '<S51>/Product2'
+  /* End of Sum: '<S52>/Add1' */
+  for (i = 0; i < 3; i++) {
+    /* Sum: '<S29>/Add' incorporates:
+     *  Delay: '<S2>/MemoryX'
+     *  Product: '<S52>/Product2'
+     */
+    rtb_Add_d[i] = (rtb_M[i + 3] * rtb_Reshapey_0[1] + rtb_M[i] *
+                    rtb_Reshapey_0[0]) + rtDW.MemoryX_DSTATE[i];
+  }
+
+  /* End of Outputs for SubSystem: '<S29>/Enabled Subsystem' */
+
+  /* Outputs for Enabled SubSystem: '<S23>/MeasurementUpdate' incorporates:
+   *  EnablePort: '<S48>/Enable'
    */
-  rtb_M[0] = rtb_M[0] * yCovSqrt + rtDW.MemoryX_DSTATE[0];
-
-  /* Product: '<S51>/Product2' */
-  a_vo_tmp = rtb_M[1] * yCovSqrt;
-
-  /* Sum: '<S28>/Add' incorporates:
-   *  Delay: '<S1>/MemoryX'
-   *  Product: '<S51>/Product2'
-   */
-  scale = rtb_M[2] * yCovSqrt + rtDW.MemoryX_DSTATE[2];
-
-  /* End of Outputs for SubSystem: '<S28>/Enabled Subsystem' */
-
-  /* Outputs for Enabled SubSystem: '<S22>/MeasurementUpdate' incorporates:
-   *  EnablePort: '<S47>/Enable'
-   */
-  /* Sum: '<S47>/Sum' incorporates:
-   *  Delay: '<S1>/MemoryX'
+  /* Sum: '<S48>/Sum' incorporates:
+   *  Delay: '<S2>/MemoryX'
    *  Inport: '<Root>/current'
-   *  Inport: '<Root>/voltage'
    *  MATLAB Function: '<Root>/Matrix Generator'
-   *  Product: '<S47>/C[k]*xhat[k|k-1]'
-   *  Product: '<S47>/D[k]*u[k]'
-   *  Sum: '<S47>/Add1'
+   *  Product: '<S48>/C[k]*xhat[k|k-1]'
+   *  Product: '<S48>/D[k]*u[k]'
+   *  Sum: '<S48>/Add1'
    */
-  yCovSqrt = rtU.voltage - (((0.0 * rtDW.MemoryX_DSTATE[0] + 0.0 *
-    rtDW.MemoryX_DSTATE[1]) + rtDW.MemoryX_DSTATE[2]) + 0.0 * rtU.current);
+  for (i = 0; i < 2; i++) {
+    rtb_Reshapey_0[i] = rtb_Reshapey[i] - (((rtb_C[i + 2] * rtDW.MemoryX_DSTATE
+      [1] + rtb_C[i] * rtDW.MemoryX_DSTATE[0]) + rtb_C[i + 4] *
+      rtDW.MemoryX_DSTATE[2]) + 0.0 * rtU.current);
+  }
 
-  /* Product: '<S47>/Product3' */
-  absxk = rtb_L[0] * yCovSqrt;
-  Product3_idx_1 = rtb_L[1] * yCovSqrt;
-  Product3_idx_2 = rtb_L[2] * yCovSqrt;
+  /* End of Sum: '<S48>/Sum' */
+  for (i = 0; i < 3; i++) {
+    /* Product: '<S48>/Product3' */
+    c[i] = rtb_L[i + 3] * rtb_Reshapey_0[1] + rtb_L[i] * rtb_Reshapey_0[0];
+  }
 
-  /* End of Outputs for SubSystem: '<S22>/MeasurementUpdate' */
+  /* End of Outputs for SubSystem: '<S23>/MeasurementUpdate' */
+
+  /* Outport: '<Root>/voltage_estimated' incorporates:
+   *  Inport: '<Root>/current'
+   *  MATLAB Function: '<Root>/Matrix Generator'
+   *  Product: '<S5>/Product'
+   *  Product: '<S5>/Product1'
+   *  Sum: '<S5>/Add1'
+   */
+  for (i = 0; i < 2; i++) {
+    rtY.voltage_estimated[i] = ((rtb_C[i + 2] * rtb_Add_d[1] + rtb_C[i] *
+      rtb_Add_d[0]) + rtb_C[i + 4] * rtb_Add_d[2]) + 0.0 * rtU.current;
+  }
+
+  /* End of Outport: '<Root>/voltage_estimated' */
 
   /* Lookup_n-D: '<Root>/1-D Lookup Table' */
-  yCovSqrt = look1_binlg(rtb_M[0], rtConstP.uDLookupTable_bp01Data,
-    rtConstP.uDLookupTable_tableData, 7U);
+  t = look1_binlg(rtb_Add_d[0], rtConstP.pooled6, rtConstP.pooled3, 11U);
 
   /* Saturate: '<Root>/Saturation' */
-  if (yCovSqrt > 1.0) {
-    yCovSqrt = 1.0;
-  } else if (yCovSqrt < 0.0) {
-    yCovSqrt = 0.0;
+  if (t > 1.0) {
+    t = 1.0;
+  } else if (t < 0.0) {
+    t = 0.0;
   }
 
   /* End of Saturate: '<Root>/Saturation' */
 
   /* Outport: '<Root>/soc_estimated' */
-  rtY.soc_estimated = yCovSqrt;
+  rtY.soc_estimated = t;
 
-  /* Outport: '<Root>/voltage_estimated' incorporates:
-   *  Delay: '<S1>/MemoryX'
-   *  Inport: '<Root>/current'
-   *  MATLAB Function: '<Root>/Matrix Generator'
-   *  Product: '<S4>/Product'
-   *  Product: '<S4>/Product1'
-   *  Sum: '<S28>/Add'
-   *  Sum: '<S4>/Add1'
-   */
-  rtY.voltage_estimated = (((a_vo_tmp + rtDW.MemoryX_DSTATE[1]) * 0.0 + 0.0 *
-    rtb_M[0]) + scale) + 0.0 * rtU.current;
+  /* Outport: '<Root>/soc_measured' */
+  rtY.soc_measured = r;
 
-  /* MATLAB Function: '<S45>/SqrtUsedFcn' */
-  for (j = 0; j < 3; j++) {
+  /* MATLAB Function: '<S46>/SqrtUsedFcn' */
+  for (i = 0; i < 3; i++) {
     for (iAcol = 0; iAcol < 3; iAcol++) {
-      Ss[j + 3 * iAcol] = (rtb_Zs[j + 3] * rtb_Zs[iAcol + 3] + rtb_Zs[j] *
-                           rtb_Zs[iAcol]) + rtb_Zs[j + 6] * rtb_Zs[iAcol + 6];
+      Ss[i + 3 * iAcol] = (rtb_Zs[i + 3] * rtb_Zs[iAcol + 3] + rtb_Zs[i] *
+                           rtb_Zs[iAcol]) + rtb_Zs[i + 6] * rtb_Zs[iAcol + 6];
     }
   }
 
-  /* End of MATLAB Function: '<S45>/SqrtUsedFcn' */
+  /* End of MATLAB Function: '<S46>/SqrtUsedFcn' */
 
   /* Outport: '<Root>/standard_deviation' incorporates:
    *  Gain: '<Root>/Gain'
@@ -2298,56 +2731,12 @@ void RC_Model_KF_vout_for_MCU_step(void)
    */
   rtY.standard_deviation = 3.0 * sqrt(Ss[0]);
 
-  /* Outport: '<Root>/soc_measured' incorporates:
-   *  Constant: '<Root>/Battery Capacity Ah'
-   *  DiscreteIntegrator: '<Root>/Discrete-Time Integrator'
-   *  Product: '<Root>/Divide9'
-   */
-  rtY.soc_measured = rtDW.DiscreteTimeIntegrator_DSTATE / 5.0;
-
-  /* Update for Delay: '<S1>/MemoryP' */
+  /* Update for Delay: '<S2>/MemoryP' */
   rtDW.icLoad = false;
   memcpy(&rtDW.MemoryP_DSTATE[0], &rtb_SNew[0], 9U * sizeof(real_T));
 
   /* Update for Delay: '<Root>/Delay' */
-  rtDW.Delay_DSTATE = yCovSqrt;
-
-  /* Update for Delay: '<S1>/MemoryX' */
-  rtDW.icLoad_o = false;
-
-  /* Product: '<S22>/A[k]*xhat[k|k-1]' incorporates:
-   *  Delay: '<S1>/MemoryX'
-   */
-  for (j = 0; j < 3; j++) {
-    rtb_C[j] = (rtb_A[j + 3] * rtDW.MemoryX_DSTATE[1] + rtb_A[j] *
-                rtDW.MemoryX_DSTATE[0]) + rtb_A[j + 6] * rtDW.MemoryX_DSTATE[2];
-  }
-
-  /* End of Product: '<S22>/A[k]*xhat[k|k-1]' */
-
-  /* Update for Delay: '<S1>/MemoryX' incorporates:
-   *  Inport: '<Root>/current'
-   *  MATLAB Function: '<Root>/Matrix Generator'
-   *  Product: '<S22>/B[k]*u[k]'
-   *  Sum: '<S22>/Add'
-   */
-  rtDW.MemoryX_DSTATE[0] = ((1.0 - exp(-0.1 / (2.0 * rtb_Rb * rtb_Cbulk))) *
-    rtb_Rb * rtU.current + rtb_C[0]) + absxk;
-  rtDW.MemoryX_DSTATE[1] = ((1.0 - exp(-0.1 / (2.0 * rtb_Rb * rtb_Csurface))) *
-    rtb_Rb * rtU.current + rtb_C[1]) + Product3_idx_1;
-
-  /* MATLAB Function: '<Root>/Matrix Generator' */
-  rtb_Rt /= a_vo_tmp_tmp;
-
-  /* Update for Delay: '<S1>/MemoryX' incorporates:
-   *  Inport: '<Root>/current'
-   *  MATLAB Function: '<Root>/Matrix Generator'
-   *  Product: '<S22>/B[k]*u[k]'
-   *  Sum: '<S22>/Add'
-   */
-  rtDW.MemoryX_DSTATE[2] = (((1.0 / (2.0 * rtb_Csurface) - rtb_Rt) + rtb_Rt) *
-    ((exp(-a_vo * 0.1) - 1.0) * (1.0 / a_vo)) * rtU.current + rtb_C[2]) +
-    Product3_idx_2;
+  rtDW.Delay_DSTATE = t;
 
   /* Update for DiscreteIntegrator: '<Root>/Discrete-Time Integrator' incorporates:
    *  Gain: '<Root>/Convert to Ah'
@@ -2362,27 +2751,72 @@ void RC_Model_KF_vout_for_MCU_step(void)
   }
 
   /* End of Update for DiscreteIntegrator: '<Root>/Discrete-Time Integrator' */
+
+  /* Update for RandomNumber: '<S1>/White Noise' */
+  rtDW.NextOutput = rt_nrand_Upu32_Yd_f_pw_snf(&rtDW.RandSeed);
+
+  /* Update for Delay: '<S2>/MemoryX' */
+  rtDW.icLoad_o = false;
+
+  /* Product: '<S23>/A[k]*xhat[k|k-1]' incorporates:
+   *  Delay: '<S2>/MemoryX'
+   */
+  for (i = 0; i < 3; i++) {
+    rtb_Add_d[i] = (rtb_A[i + 3] * rtDW.MemoryX_DSTATE[1] + rtb_A[i] *
+                    rtDW.MemoryX_DSTATE[0]) + rtb_A[i + 6] *
+      rtDW.MemoryX_DSTATE[2];
+  }
+
+  /* End of Product: '<S23>/A[k]*xhat[k|k-1]' */
+
+  /* Update for Delay: '<S2>/MemoryX' incorporates:
+   *  Inport: '<Root>/current'
+   *  MATLAB Function: '<Root>/Matrix Generator'
+   *  Product: '<S23>/B[k]*u[k]'
+   *  Sum: '<S23>/Add'
+   */
+  rtDW.MemoryX_DSTATE[0] = ((1.0 - exp(-0.1 / (2.0 * rtb_Rb * rtb_Cbulk))) *
+    rtb_Rb * rtU.current + rtb_Add_d[0]) + c[0];
+  rtDW.MemoryX_DSTATE[1] = ((1.0 - exp(-0.1 / (2.0 * rtb_Rb * rtb_Csurface))) *
+    rtb_Rb * rtU.current + rtb_Add_d[1]) + c[1];
+
+  /* MATLAB Function: '<Root>/Matrix Generator' */
+  rtb_Rt /= a_vo_tmp_tmp;
+
+  /* Update for Delay: '<S2>/MemoryX' incorporates:
+   *  Inport: '<Root>/current'
+   *  MATLAB Function: '<Root>/Matrix Generator'
+   *  Product: '<S23>/B[k]*u[k]'
+   *  Sum: '<S23>/Add'
+   */
+  rtDW.MemoryX_DSTATE[2] = (((1.0 / (2.0 * rtb_Csurface) - rtb_Rt) + rtb_Rt) *
+    ((exp(-a_vo * 0.1) - 1.0) * (1.0 / a_vo)) * rtU.current + rtb_Add_d[2]) + c
+    [2];
 }
 
 /* Model initialize function */
-void RC_Model_KF_vout_for_MCU_initialize(void)
+void RC_Model_KF_Vout_Vcb_for_MCU_initialize(void)
 {
   /* Registration code */
 
   /* initialize non-finites */
   rt_InitInfAndNaN(sizeof(real_T));
 
-  /* InitializeConditions for Delay: '<S1>/MemoryP' */
+  /* InitializeConditions for Delay: '<S2>/MemoryP' */
   rtDW.icLoad = true;
 
   /* InitializeConditions for Delay: '<Root>/Delay' */
   rtDW.Delay_DSTATE = 1.0;
 
-  /* InitializeConditions for Delay: '<S1>/MemoryX' */
-  rtDW.icLoad_o = true;
-
   /* InitializeConditions for DiscreteIntegrator: '<Root>/Discrete-Time Integrator' */
   rtDW.DiscreteTimeIntegrator_DSTATE = 5.0;
+
+  /* InitializeConditions for RandomNumber: '<S1>/White Noise' */
+  rtDW.RandSeed = 1529675776U;
+  rtDW.NextOutput = rt_nrand_Upu32_Yd_f_pw_snf(&rtDW.RandSeed);
+
+  /* InitializeConditions for Delay: '<S2>/MemoryX' */
+  rtDW.icLoad_o = true;
 }
 
 /*
