@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "RC_Model_KF_vout_for_MCU.h"  /* Simulink Model header file */
+#include "RC_Model_KF_Vout_Vcb_for_MCU.h"  /* Simulink Model header file */
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -148,7 +148,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	RC_Model_KF_vout_for_MCU_initialize(); //Simulink Model initialization
+  RC_Model_KF_Vout_Vcb_for_MCU_initialize(); //Simulink Model initialization
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -222,7 +222,7 @@ int main(void)
 			soc_estimator();
 		}
 
-		//HIL_simulation();
+//		HIL_simulation();
 
     /* USER CODE END WHILE */
 
@@ -619,7 +619,7 @@ void process_adc_buffer() {
 		sum_temperature += adc_buffer[i + 2] * 3.312 / 4096.0;
 	}
 	current_temp = (sum_current / NUMBER_OF_SAMPLES)*I_GAIN;
-	current_temp = -(((sum_current / NUMBER_OF_SAMPLES)*(I_GAIN))-V_I_REF)*40;
+	current_temp = -(((sum_current / NUMBER_OF_SAMPLES)*(I_GAIN))-V_I_REF)*40;//for estimation output current must be negative
 	if(current_temp>-0.1 && current_temp<0.1){
 		current = 0;
 	}else{
@@ -706,11 +706,11 @@ void HIL_simulation() {
 				rtU.voltage = atof(token);
 			}
 		}
-		RC_Model_KF_vout_for_MCU_step();
+		RC_Model_KF_Vout_Vcb_for_MCU_step();
 		elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
 		sprintf(output_data, "%d;%.4f;%.4f;%.4f;%.4f\r", elapsed_time,
-				rtY.soc_estimated, rtY.voltage_estimated, rtU.current,
-				rtU.voltage);
+				rtY.soc_estimated, rtY.voltage_estimated[0], rtU.current,
+				rtU.voltage); //voltage_estimated[0]=Vt voltage_estimated[1]=Vcb
 		process_data = 0; //The input data has been processed
 		HAL_UART_Transmit_IT(&huart2, (uint8_t*) output_data,
 				sizeof(output_data));
@@ -724,7 +724,7 @@ void soc_estimator() {
 	rtU.voltage = voltage;
 	start_time = __HAL_TIM_GET_COUNTER(&htim6); // Get current time
 //	HAL_Delay(9);
-	RC_Model_KF_vout_for_MCU_step();
+	RC_Model_KF_Vout_Vcb_for_MCU_step();
 	elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
 }
 

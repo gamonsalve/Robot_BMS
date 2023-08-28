@@ -5,11 +5,11 @@
  *
  * File: rtwtypes.h
  *
- * Code generated for Simulink model 'RC_Model_KF_vout_for_MCU'.
+ * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.14
+ * Model version                  : 4.68
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Wed Jun 14 13:33:18 2023
+ * C/C++ source code generated on : Fri Aug 25 14:07:21 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
