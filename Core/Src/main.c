@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "RC_Model_KF_Vout_Vcb_for_MCU.h"  /* Simulink Model header file */
+#include "RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM.h"  /* Simulink Model header file */
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -148,7 +148,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  RC_Model_KF_Vout_Vcb_for_MCU_initialize(); //Simulink Model initialization
+  RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM_initialize();//Simulink Model initialization
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -706,7 +706,7 @@ void HIL_simulation() {
 				rtU.voltage = atof(token);
 			}
 		}
-		RC_Model_KF_Vout_Vcb_for_MCU_step();
+		RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM_step();
 		elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
 		sprintf(output_data, "%d;%.4f;%.4f;%.4f;%.4f\r", elapsed_time,
 				rtY.soc_estimated, rtY.voltage_estimated[0], rtU.current,
@@ -724,7 +724,7 @@ void soc_estimator() {
 	rtU.voltage = voltage;
 	start_time = __HAL_TIM_GET_COUNTER(&htim6); // Get current time
 //	HAL_Delay(9);
-	RC_Model_KF_Vout_Vcb_for_MCU_step();
+	RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM_step();
 	elapsed_time = __HAL_TIM_GET_COUNTER(&htim6) - start_time;
 }
 

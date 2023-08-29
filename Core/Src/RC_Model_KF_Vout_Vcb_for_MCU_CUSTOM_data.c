@@ -3,13 +3,13 @@
  * course requirements at degree granting institutions only.  Not for
  * government, commercial, or other organizational use.
  *
- * File: RC_Model_KF_Vout_Vcb_for_MCU_data.c
+ * File: RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM_data.c
  *
- * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
+ * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM'.
  *
- * Model version                  : 4.90
+ * Model version                  : 4.97
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Tue Aug 29 11:54:22 2023
+ * C/C++ source code generated on : Tue Aug 29 14:46:32 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -19,26 +19,10 @@
  * Validation result: Not run
  */
 
-#include "RC_Model_KF_Vout_Vcb_for_MCU.h"
+#include "RC_Model_KF_Vout_Vcb_for_MCU_CUSTOM.h"
 
 /* Constant parameters (default storage) */
 const ConstP rtConstP = {
-  /* Expression: pInitialization.Qbar
-   * Referenced by: '<S24>/Qbar_'
-   */
-  { 0.01, 0.0, 0.0, 0.0, 0.031622776601683791, 0.0, 0.0, 0.0,
-    0.31622776601683794 },
-
-  /* Expression: pInitialization.Rbar
-   * Referenced by: '<S24>/Rbar_'
-   */
-  { 0.1, 0.0, 0.0, 1.0 },
-
-  /* Expression: pInitialization.P0
-   * Referenced by: '<S2>/P0'
-   */
-  { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 },
-
   /* Expression: Rt
    * Referenced by: '<Root>/Rt'
    */
