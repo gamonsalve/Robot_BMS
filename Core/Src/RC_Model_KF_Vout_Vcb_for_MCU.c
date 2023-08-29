@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.68
+ * Model version                  : 4.72
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Fri Aug 25 14:07:21 2023
+ * C/C++ source code generated on : Tue Aug 29 09:24:19 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -2314,19 +2314,19 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
     }
 
     Hnew[i] = 0.0;
-    Hnew[i] += rtb_M[i] * 0.31622776601683794;
+    Hnew[i] += rtb_M[i] * 0.031622776601683791;
     r = rtb_M[i + 3];
     Hnew[i] += r * 0.0;
     Hnew[i + 3] = 0.0;
     Hnew[i + 3] += rtb_M[i] * 0.0;
-    Hnew[i + 3] += r * 0.31622776601683794;
+    Hnew[i + 3] += r * 0.97467943448089633;
   }
 
   qrFactor_j(rtb_SNew, rtb_Zs, Hnew);
-  RsInv[0] = 3.1622776601683791;
+  RsInv[0] = 31.622776601683796;
   RsInv[1] = -0.0;
   RsInv[2] = -0.0;
-  RsInv[3] = 3.1622776601683791;
+  RsInv[3] = 1.0259783520851542;
   for (i = 0; i < 3; i++) {
     Hnew[i] = 0.0;
     Hnew[i + 3] = 0.0;
@@ -2337,12 +2337,12 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
     yCovSqrt[i] = 0.0;
     iAcol = i << 1;
     r = RsInv[iAcol];
-    yCovSqrt[i] += r * 3.1622776601683791;
+    yCovSqrt[i] += r * 31.622776601683796;
     t = RsInv[iAcol + 1];
     yCovSqrt[i] += t * -0.0;
     yCovSqrt[i + 2] = 0.0;
     yCovSqrt[i + 2] += r * -0.0;
-    yCovSqrt[i + 2] += t * 3.1622776601683791;
+    yCovSqrt[i + 2] += t * 1.0259783520851542;
   }
 
   for (i = 0; i < 3; i++) {
@@ -2617,8 +2617,8 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
    *  Sum: '<Root>/Add1'
    */
   rtb_Reshapey[0] = rtU.voltage;
-  rtb_Reshapey[1] = look1_binlg(0.001 * rtDW.NextOutput + r, rtConstP.pooled3,
-    rtConstP.pooled6, 11U);
+  rtb_Reshapey[1] = look1_binlg(0.099999999999999992 * rtDW.NextOutput + r,
+    rtConstP.pooled3, rtConstP.pooled6, 11U);
 
   /* Delay: '<S2>/MemoryX' incorporates:
    *  Constant: '<S2>/X0'

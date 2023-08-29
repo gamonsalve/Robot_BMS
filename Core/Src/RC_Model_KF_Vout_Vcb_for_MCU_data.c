@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.68
+ * Model version                  : 4.72
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Fri Aug 25 14:07:21 2023
+ * C/C++ source code generated on : Tue Aug 29 09:24:19 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -26,12 +26,12 @@ const ConstP rtConstP = {
   /* Expression: pInitialization.Qbar
    * Referenced by: '<S24>/Qbar_'
    */
-  { 0.1, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1 },
+  { 0.01, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.1 },
 
   /* Expression: pInitialization.Rbar
    * Referenced by: '<S24>/Rbar_'
    */
-  { 0.31622776601683794, 0.0, 0.0, 0.31622776601683794 },
+  { 0.031622776601683791, 0.0, 0.0, 0.97467943448089633 },
 
   /* Expression: pInitialization.P0
    * Referenced by: '<S2>/P0'
