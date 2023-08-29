@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.72
+ * Model version                  : 4.90
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Tue Aug 29 09:24:19 2023
+ * C/C++ source code generated on : Tue Aug 29 11:54:22 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -2156,7 +2156,6 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
   real_T rtb_C[6];
   real_T rtb_L[6];
   real_T rtb_M[6];
-  real_T RsInv[4];
   real_T yCovSqrt[4];
   real_T yCovSqrt_0[4];
   real_T c[3];
@@ -2179,6 +2178,7 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
   int32_T Ss_tmp;
   int32_T i;
   int32_T iAcol;
+  int8_T RsInv[4];
   static const int8_T tmp[6] = { 0, 1, 0, 0, 1, 0 };
 
   /* Delay: '<S2>/MemoryP' incorporates:
@@ -2314,19 +2314,19 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
     }
 
     Hnew[i] = 0.0;
-    Hnew[i] += rtb_M[i] * 0.031622776601683791;
+    Hnew[i] += rtb_M[i] * 0.1;
     r = rtb_M[i + 3];
     Hnew[i] += r * 0.0;
     Hnew[i + 3] = 0.0;
     Hnew[i + 3] += rtb_M[i] * 0.0;
-    Hnew[i + 3] += r * 0.97467943448089633;
+    Hnew[i + 3] += r;
   }
 
   qrFactor_j(rtb_SNew, rtb_Zs, Hnew);
-  RsInv[0] = 31.622776601683796;
-  RsInv[1] = -0.0;
-  RsInv[2] = -0.0;
-  RsInv[3] = 1.0259783520851542;
+  RsInv[0] = 10;
+  RsInv[1] = 0;
+  RsInv[2] = 0;
+  RsInv[3] = 1;
   for (i = 0; i < 3; i++) {
     Hnew[i] = 0.0;
     Hnew[i + 3] = 0.0;
@@ -2336,13 +2336,9 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
   for (i = 0; i < 2; i++) {
     yCovSqrt[i] = 0.0;
     iAcol = i << 1;
-    r = RsInv[iAcol];
-    yCovSqrt[i] += r * 31.622776601683796;
-    t = RsInv[iAcol + 1];
-    yCovSqrt[i] += t * -0.0;
+    yCovSqrt[i] += (real_T)RsInv[iAcol] * 10.0;
     yCovSqrt[i + 2] = 0.0;
-    yCovSqrt[i + 2] += r * -0.0;
-    yCovSqrt[i + 2] += t * 1.0259783520851542;
+    yCovSqrt[i + 2] += (real_T)RsInv[iAcol + 1];
   }
 
   for (i = 0; i < 3; i++) {
@@ -2612,7 +2608,7 @@ void RC_Model_KF_Vout_Vcb_for_MCU_step(void)
   /* Reshape: '<S2>/Reshapey' incorporates:
    *  Gain: '<S1>/Output'
    *  Inport: '<Root>/voltage'
-   *  Lookup_n-D: '<Root>/1-D Lookup Table1'
+   *  Lookup_n-D: '<Root>/1-D Lookup Table2'
    *  RandomNumber: '<S1>/White Noise'
    *  Sum: '<Root>/Add1'
    */

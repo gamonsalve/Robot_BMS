@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.72
+ * Model version                  : 4.90
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Tue Aug 29 09:24:19 2023
+ * C/C++ source code generated on : Tue Aug 29 11:54:22 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -75,7 +75,7 @@ typedef struct {
   /* Pooled Parameter (Mixed Expressions)
    * Referenced by:
    *   '<Root>/1-D Lookup Table'
-   *   '<Root>/1-D Lookup Table1'
+   *   '<Root>/1-D Lookup Table2'
    *   '<Root>/Cbulk'
    *   '<Root>/Csurface'
    *   '<Root>/Rb'
@@ -104,7 +104,7 @@ typedef struct {
   /* Pooled Parameter (Expression: Vocv)
    * Referenced by:
    *   '<Root>/1-D Lookup Table'
-   *   '<Root>/1-D Lookup Table1'
+   *   '<Root>/1-D Lookup Table2'
    */
   real_T pooled6[12];
 } ConstP;
@@ -150,10 +150,6 @@ extern RT_MODEL *const rtM;
 /*-
  * These blocks were eliminated from the model due to optimizations:
  *
- * Block '<Root>/Abs' : Unused code path elimination
- * Block '<Root>/Add2' : Unused code path elimination
- * Block '<Root>/Display' : Unused code path elimination
- * Block '<Root>/Gain2' : Unused code path elimination
  * Block '<S12>/Data Type Duplicate' : Unused code path elimination
  * Block '<S13>/Data Type Duplicate' : Unused code path elimination
  * Block '<S14>/Data Type Duplicate' : Unused code path elimination
@@ -177,7 +173,7 @@ extern RT_MODEL *const rtM;
  * Block '<S33>/CheckSignalProperties' : Unused code path elimination
  * Block '<S43>/CheckSignalProperties' : Unused code path elimination
  * Block '<S44>/CheckSignalProperties' : Unused code path elimination
- * Block '<Root>/Mean' : Unused code path elimination
+ * Block '<Root>/Scope1' : Unused code path elimination
  * Block '<Root>/Gain1' : Eliminated nontunable gain of 1
  * Block '<S15>/Conversion' : Eliminate redundant data type conversion
  * Block '<S20>/Conversion' : Eliminate redundant data type conversion

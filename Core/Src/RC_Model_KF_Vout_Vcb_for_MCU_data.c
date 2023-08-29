@@ -7,9 +7,9 @@
  *
  * Code generated for Simulink model 'RC_Model_KF_Vout_Vcb_for_MCU'.
  *
- * Model version                  : 4.72
+ * Model version                  : 4.90
  * Simulink Coder version         : 9.8 (R2022b) 13-May-2022
- * C/C++ source code generated on : Tue Aug 29 09:24:19 2023
+ * C/C++ source code generated on : Tue Aug 29 11:54:22 2023
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -26,12 +26,13 @@ const ConstP rtConstP = {
   /* Expression: pInitialization.Qbar
    * Referenced by: '<S24>/Qbar_'
    */
-  { 0.01, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.1 },
+  { 0.01, 0.0, 0.0, 0.0, 0.031622776601683791, 0.0, 0.0, 0.0,
+    0.31622776601683794 },
 
   /* Expression: pInitialization.Rbar
    * Referenced by: '<S24>/Rbar_'
    */
-  { 0.031622776601683791, 0.0, 0.0, 0.97467943448089633 },
+  { 0.1, 0.0, 0.0, 1.0 },
 
   /* Expression: pInitialization.P0
    * Referenced by: '<S2>/P0'
@@ -49,7 +50,7 @@ const ConstP rtConstP = {
   /* Pooled Parameter (Mixed Expressions)
    * Referenced by:
    *   '<Root>/1-D Lookup Table'
-   *   '<Root>/1-D Lookup Table1'
+   *   '<Root>/1-D Lookup Table2'
    *   '<Root>/Cbulk'
    *   '<Root>/Csurface'
    *   '<Root>/Rb'
@@ -87,7 +88,7 @@ const ConstP rtConstP = {
   /* Pooled Parameter (Expression: Vocv)
    * Referenced by:
    *   '<Root>/1-D Lookup Table'
-   *   '<Root>/1-D Lookup Table1'
+   *   '<Root>/1-D Lookup Table2'
    */
   { 11.896808, 11.980918001874313, 12.065333309694992, 12.151206877060016,
     12.236338283185747, 12.319855196857679, 12.403140698111921,
